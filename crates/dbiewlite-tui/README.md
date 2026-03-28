@@ -1,6 +1,6 @@
 # dbiewlite-tui
 
-Terminal UI for [DBiewLite](https://github.com/Ivapo/DBiewLite) — a friendly, read-only SQLite database viewer.
+Terminal UI for [DBiewLite](https://ivapo.github.io/DBiewLite/) — a friendly, read-only SQLite database viewer.
 
 ## Install
 

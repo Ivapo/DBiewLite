@@ -5,6 +5,8 @@ description = "Shared SQLite operations for DBiewLite"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/Ivapo/DBiewLite"
+homepage = "https://ivapo.github.io/DBiewLite/"
+readme = "README.md"
 keywords = ["sqlite", "database", "viewer", "tui"]
 categories = ["database"]
 
