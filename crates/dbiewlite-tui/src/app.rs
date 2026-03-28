@@ -15,7 +15,9 @@ pub struct App {
     pub query_error: Option<String>,
     pub mode: AppMode,
     pub should_quit: bool,
+    pub sidebar_collapsed: bool,
     pub status_message: Option<String>,
+    pub status_message_at: Option<std::time::Instant>,
 }
 
 pub struct TableView {
@@ -42,6 +44,11 @@ pub enum AppMode {
 }
 
 impl App {
+    pub fn set_status(&mut self, msg: String) {
+        self.status_message = Some(msg);
+        self.status_message_at = Some(std::time::Instant::now());
+    }
+
     pub fn new(path: &str) -> Result<Self, String> {
         let db = Database::open(path)?;
         let db_info = db.get_info()?;
@@ -62,7 +69,9 @@ impl App {
             query_error: None,
             mode: AppMode::Normal,
             should_quit: false,
+            sidebar_collapsed: false,
             status_message: None,
+            status_message_at: None,
         };
 
         // Auto-select first table if available
@@ -92,7 +101,7 @@ impl App {
                     self.status_message = None;
                 }
                 Err(e) => {
-                    self.status_message = Some(format!("Error: {}", e));
+                    self.set_status(format!("Error: {}", e));
                 }
             }
         }
@@ -110,7 +119,7 @@ impl App {
                             tv.data = data;
                             tv.table_state.select(Some(0));
                         }
-                        Err(e) => self.status_message = Some(format!("Error: {}", e)),
+                        Err(e) => self.set_status(format!("Error: {}", e)),
                     }
                 }
             }
@@ -127,7 +136,7 @@ impl App {
                         tv.data = data;
                         tv.table_state.select(Some(0));
                     }
-                    Err(e) => self.status_message = Some(format!("Error: {}", e)),
+                    Err(e) => self.set_status(format!("Error: {}", e)),
                 }
             }
         }
@@ -151,7 +160,7 @@ impl App {
                         tv.data = data;
                         tv.table_state.select(Some(0));
                     }
-                    Err(e) => self.status_message = Some(format!("Error: {}", e)),
+                    Err(e) => self.set_status(format!("Error: {}", e)),
                 }
             }
         }
@@ -166,12 +175,12 @@ impl App {
             Ok(result) => {
                 self.query_result = Some(result);
                 self.query_error = None;
-                self.status_message = Some("Query executed successfully".to_string());
+                self.set_status("Query executed successfully".to_string());
             }
             Err(e) => {
                 self.query_result = None;
                 self.query_error = Some(e);
-                self.status_message = Some("Query failed".to_string());
+                self.set_status("Query failed".to_string());
             }
         }
     }

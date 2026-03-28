@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { AppState, DbInfo, TableInfo, ColumnInfo, QueryResult, IndexInfo } from "./types";
 import { initTheme, cycleTheme } from "./theme";
 
@@ -113,10 +114,18 @@ async function exportCsv(): Promise<void> {
   try {
     const outputPath = `${state.selectedTable}.csv`;
     await invoke("export_csv", { table: state.selectedTable, outputPath });
-    alert(`Exported to ${outputPath}`);
+    showStatus(`Exported to ${outputPath}`);
   } catch (e) {
-    alert(`Export failed: ${e}`);
+    showStatus(`Export failed: ${e}`);
   }
+}
+
+function showStatus(msg: string): void {
+  const toast = document.getElementById("status-toast");
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 3000);
 }
 
 function formatCellValue(val: unknown): string {
@@ -153,12 +162,14 @@ function render(): void {
   app.innerHTML = `
     <div class="layout">
       <div class="title-bar">
-        <span class="title-text">DBiewLite \u2502 ${fileName} (${formatSize(info.file_size)}) \u2502 ${info.table_count} tables \u2502 SQLite ${info.sqlite_version}</span>
+        <span class="title-text">DBiewLite</span>
+        <span class="title-info">SQLite ${info.sqlite_version} \u2502 ${info.table_count} tables \u2502 <span class="title-filename">${fileName}</span> (${formatSize(info.file_size)})</span>
         <div class="title-actions">
           <button id="theme-btn" class="btn btn-sm">Theme</button>
           <button id="open-new-btn" class="btn btn-sm">Open</button>
         </div>
       </div>
+      <div id="status-toast" class="status-toast hidden"></div>
       <div class="main-area">
         <div class="sidebar">
           <div class="sidebar-section">
@@ -278,7 +289,7 @@ function renderDataTable(): string {
         <div class="data-actions">
           <button id="prev-page" class="btn btn-sm" ${state.page === 0 ? "disabled" : ""}>\u25c0</button>
           <button id="next-page" class="btn btn-sm" ${end >= total ? "disabled" : ""}>\u25b6</button>
-          <button id="export-btn" class="btn btn-sm">Export CSV</button>
+          <button id="export-btn" class="btn btn-sm">Export .csv</button>
         </div>
       </div>
       <div class="schema-bar">${schemaInfo}</div>
@@ -325,8 +336,10 @@ function renderQueryPanel(): string {
 }
 
 async function handleOpenFile(): Promise<void> {
-  // Prompt for path — will replace with tauri dialog later
-  const path = prompt("Enter path to SQLite database:");
+  const path = await open({
+    multiple: false,
+    filters: [{ name: "SQLite", extensions: ["sqlite", "db", "sqlite3"] }],
+  });
   if (path) {
     await openDatabase(path);
   }
@@ -343,6 +356,14 @@ function setupKeyboardShortcuts(): void {
     if ((e.metaKey || e.ctrlKey) && e.key === "t") {
       e.preventDefault();
       cycleTheme();
+    }
+    // Cmd+B: toggle sidebar
+    if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+      e.preventDefault();
+      const sidebar = document.querySelector(".sidebar") as HTMLElement | null;
+      if (sidebar) {
+        sidebar.classList.toggle("collapsed");
+      }
     }
     // Cmd+E: export
     if ((e.metaKey || e.ctrlKey) && e.key === "e") {

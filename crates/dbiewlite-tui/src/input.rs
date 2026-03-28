@@ -17,20 +17,14 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
 
 fn handle_normal(app: &mut App, key: KeyEvent) {
     match key.code {
-        // Panel switching
-        KeyCode::Tab => {
-            app.active_panel = match app.active_panel {
-                Panel::Sidebar => Panel::Data,
-                Panel::Data => Panel::Query,
-                Panel::Query => Panel::Sidebar,
-            };
-        }
-        KeyCode::BackTab => {
-            app.active_panel = match app.active_panel {
-                Panel::Sidebar => Panel::Query,
-                Panel::Data => Panel::Sidebar,
-                Panel::Query => Panel::Data,
-            };
+        // Panel switching (Sidebar <-> Data only, skip if sidebar collapsed)
+        KeyCode::Tab | KeyCode::BackTab => {
+            if !app.sidebar_collapsed {
+                app.active_panel = match app.active_panel {
+                    Panel::Sidebar => Panel::Data,
+                    Panel::Data | Panel::Query => Panel::Sidebar,
+                };
+            }
         }
 
         // Enter query mode
@@ -39,11 +33,19 @@ fn handle_normal(app: &mut App, key: KeyEvent) {
             app.active_panel = Panel::Query;
         }
 
+        // Toggle sidebar
+        KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.sidebar_collapsed = !app.sidebar_collapsed;
+            if app.sidebar_collapsed && app.active_panel == Panel::Sidebar {
+                app.active_panel = Panel::Data;
+            }
+        }
+
         // Export
         KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             match app.export_table_csv() {
-                Ok(path) => app.status_message = Some(format!("Exported to {}", path)),
-                Err(e) => app.status_message = Some(format!("Export failed: {}", e)),
+                Ok(path) => app.set_status(format!("Exported to {}", path)),
+                Err(e) => app.set_status(format!("Export failed: {}", e)),
             }
         }
 
@@ -121,8 +123,9 @@ fn handle_data(app: &mut App, key: KeyEvent) {
 
 fn handle_query_input(app: &mut App, key: KeyEvent) {
     match key.code {
-        KeyCode::Esc => {
+        KeyCode::Esc | KeyCode::Tab | KeyCode::BackTab => {
             app.mode = AppMode::Normal;
+            app.active_panel = if app.sidebar_collapsed { Panel::Data } else { Panel::Sidebar };
         }
         KeyCode::Enter => {
             app.run_query();

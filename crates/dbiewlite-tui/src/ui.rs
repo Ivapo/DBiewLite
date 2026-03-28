@@ -26,16 +26,20 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(24), // Sidebar
-            Constraint::Min(0),     // Content
-        ])
-        .split(area);
+    if app.sidebar_collapsed {
+        draw_content(f, app, area);
+    } else {
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(24), // Sidebar
+                Constraint::Min(0),     // Content
+            ])
+            .split(area);
 
-    draw_sidebar(f, app, chunks[0]);
-    draw_content(f, app, chunks[1]);
+        draw_sidebar(f, app, chunks[0]);
+        draw_content(f, app, chunks[1]);
+    }
 }
 
 fn draw_sidebar(f: &mut Frame, app: &App, area: Rect) {
@@ -53,12 +57,27 @@ fn draw_sidebar(f: &mut Frame, app: &App, area: Rect) {
         .iter()
         .enumerate()
         .map(|(i, t)| {
-            let style = if i == app.sidebar_index {
+            let selected = i == app.sidebar_index;
+            let icon_style = if selected {
+                Style::default().fg(Color::Rgb(255, 191, 0)).bg(Color::Blue)
+            } else {
+                Style::default().fg(Color::Rgb(255, 191, 0))
+            };
+            let name_style = if selected {
                 Style::default().fg(Color::White).bg(Color::Blue).add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::Blue)
+                Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)
             };
-            ListItem::new(format!(" {} ({})", t.name, t.row_count)).style(style)
+            let count_style = if selected {
+                Style::default().fg(Color::DarkGray).bg(Color::Blue)
+            } else {
+                Style::default().fg(Color::DarkGray)
+            };
+            ListItem::new(Line::from(vec![
+                Span::styled(" \u{f0ce} ", icon_style),
+                Span::styled(&t.name, name_style),
+                Span::styled(format!(" ({})", t.row_count), count_style),
+            ]))
         })
         .chain(
             if !app.views.is_empty() {
@@ -289,10 +308,7 @@ fn draw_query_panel(f: &mut Frame, app: &mut App, area: Rect) {
             .block(result_block);
         f.render_widget(table, chunks[1]);
     } else {
-        let msg = Paragraph::new("Press / or : to enter a query")
-            .style(Style::default().fg(TEXT_MUTED))
-            .block(result_block);
-        f.render_widget(msg, chunks[1]);
+        f.render_widget(result_block, chunks[1]);
     }
 }
 
@@ -304,39 +320,51 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
 
     let is_query_mode = app.mode == AppMode::QueryInput;
 
-    let left_text = if is_query_mode {
-        "query".to_string()
+    // Left side: mode/status + keybindings
+    let (mode_text, mode_style) = if let Some(msg) = &app.status_message {
+        (msg.clone(), Style::default().fg(Color::Yellow))
+    } else if is_query_mode {
+        ("query".to_string(), Style::default().fg(Color::Yellow))
     } else {
-        format!(
-            "{} ({}) \u{2502} {} tables \u{2502} SQLite {}",
-            db_name,
-            format_size(app.db_info.file_size),
-            app.db_info.table_count,
-            app.db_info.sqlite_version,
-        )
+        (String::new(), Style::default())
     };
-    let left_style = if is_query_mode || app.status_message.is_some() {
-        Style::default().fg(Color::Yellow)
+
+    let keys = match app.mode {
+        AppMode::QueryInput => "Esc:cancel  Enter:run",
+        AppMode::Normal => "q:quit  Tab:switch  /:query  Ctrl+E:export .csv  Ctrl+B:sidebar  1-9:sort",
+    };
+
+    let left_spans: Vec<Span> = if mode_text.is_empty() {
+        vec![Span::styled(format!(" {}", keys), Style::default().fg(Color::DarkGray))]
     } else {
-        Style::default().fg(Color::DarkGray)
+        vec![
+            Span::styled(format!(" {}", mode_text), mode_style),
+            Span::styled(" \u{2502} ", Style::default().fg(Color::DarkGray)),
+            Span::styled(keys, Style::default().fg(Color::DarkGray)),
+        ]
     };
 
-    let left = if let Some(msg) = &app.status_message {
-        format!(" {}", msg)
-    } else {
-        format!(" {}", left_text)
-    };
+    let left_len: usize = left_spans.iter().map(|s| s.width()).sum();
 
-    let right = match app.mode {
-        AppMode::QueryInput => "Esc:cancel  Enter:run".to_string(),
-        AppMode::Normal => "q:quit  Tab:switch  /:query  Ctrl+E:export  1-9:sort".to_string(),
-    };
+    // Right side: SQLite version │ N tables │ file.db (size)
+    let dim = Style::default().fg(Color::DarkGray);
+    let right_spans: Vec<Span> = vec![
+        Span::styled(format!("SQLite {}", app.db_info.sqlite_version), dim),
+        Span::styled(" \u{2502} ", dim),
+        Span::styled(format!("{} tables", app.db_info.table_count), dim),
+        Span::styled(" \u{2502} ", dim),
+        Span::styled(&db_name, Style::default().fg(Color::Reset)),
+        Span::styled(format!(" ({})", format_size(app.db_info.file_size)), dim),
+    ];
+    let right_len: usize = right_spans.iter().map(|s| s.width()).sum();
 
-    let bar = Line::from(vec![
-        Span::styled(left, left_style),
-        Span::styled("  ", Style::default()),
-        Span::styled(right, Style::default().fg(Color::DarkGray)),
-    ]);
+    // Fill gap between left and right
+    let width = area.width as usize;
+    let gap = width.saturating_sub(left_len + right_len);
 
-    f.render_widget(Paragraph::new(bar), area);
+    let mut spans = left_spans;
+    spans.push(Span::raw(" ".repeat(gap)));
+    spans.extend(right_spans);
+
+    f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
