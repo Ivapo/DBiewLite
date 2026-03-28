@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DBiewLite — SQLite Database Viewer</title>
+  <meta name="description" content="A friendly, read-only SQLite database viewer. Browse tables, inspect schemas, run SQL queries, and export to CSV — as a desktop app, in your terminal, or in the browser.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #09090b;
+      --bg-elevated: #18181b;
+      --bg-card: #1c1c20;
+      --border: #27272a;
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #22c55e;
+      --max-w: 1100px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Hero */
+    .hero {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 4rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero .version {
+      display: inline-block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 0.15rem 0.6rem;
+      margin-left: 0.5rem;
+      vertical-align: super;
+    }
+    .hero .tagline {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      margin: 1rem 0 2.5rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn:hover { text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-green { background: var(--green); color: #000; font-weight: 600; }
+    .btn-green:hover { background: #16a34a; }
+
+    /* Dropdown button */
+    .btn-dropdown {
+      position: relative;
+    }
+    .btn-dropdown .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 0.25rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 10;
+      width: max-content;
+    }
+    .btn-dropdown:hover .dropdown-menu,
+    .btn-dropdown:focus-within .dropdown-menu {
+      display: block;
+    }
+    .btn-dropdown .dropdown-menu a {
+      display: block;
+      padding: 0.5rem 1rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-dropdown .dropdown-menu a:hover {
+      background: var(--border);
+      text-decoration: none;
+    }
+
+    /* Section shared */
+    section {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+    section h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    /* Features grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    .feature-card .icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Shortcuts table */
+    .shortcuts-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .shortcuts-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .shortcuts-table th,
+    .shortcuts-table td {
+      text-align: left;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .shortcuts-table th {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--bg-elevated);
+      position: sticky;
+      top: 0;
+    }
+    .shortcuts-table td { white-space: nowrap; }
+    .shortcuts-table tbody tr:hover { background: var(--bg-elevated); }
+    kbd {
+      display: inline-block;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      font-family: inherit;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    /* Category row */
+    .cat-row td {
+      font-weight: 600;
+      color: var(--accent);
+      padding-top: 1rem;
+      border-bottom: none;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer */
+    footer {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--text-muted); }
+    footer a:hover { color: var(--text); }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 2rem; }
+      .hero .tagline { font-size: 1.05rem; }
+      .btn { font-size: 0.85rem; padding: 0.55rem 1rem; }
+      section { padding: 2rem 1rem; }
+      .shortcuts-table { font-size: 0.8rem; }
+      .shortcuts-table th, .shortcuts-table td { padding: 0.5rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <h1><span>DBiewLite</span> <span class="version">v0.1.0</span></h1>
+    <p class="tagline">A friendly, read-only SQLite database viewer for data analysis.</p>
+
+    <div class="btn-row">
+      <div class="btn-dropdown">
+        <span class="btn btn-primary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          macOS &#9662;
+        </span>
+        <div class="dropdown-menu">
+          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_aarch64.dmg">Apple Silicon</a>
+          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_x64.dmg">Intel</a>
+        </div>
+      </div>
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_x64-setup.exe" class="btn btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Windows
+      </a>
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_amd64.AppImage" class="btn btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Linux
+      </a>
+    </div>
+
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+      <strong>macOS:</strong> If you see "app is damaged", open Terminal and run:
+      <code style="background: var(--bg-elevated); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">xattr -cr /Applications/DBiewLite.app</code>
+    </p>
+
+    <div class="btn-row">
+      <a href="https://github.com/Ivapo/DBiewLite" class="btn btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a href="./demo/" class="btn btn-secondary">Try Web Demo</a>
+      <script type="text/javascript" src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
+      <script type="text/javascript">kofiwidget2.init('Support on Ko-fi', '#22c55e', 'K3K81U1IDK');kofiwidget2.draw();</script>
+    </div>
+  </header>
+
+  <!-- Features -->
+  <section>
+    <h2>Features</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="icon">&#x1F4C2;</div>
+        <h3>Browse Tables</h3>
+        <p>Sidebar with all tables, views, and indexes. Row counts at a glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x25A3;</div>
+        <h3>Paginated Data Grid</h3>
+        <p>Scroll through large tables with fast pagination. 50 rows per page, instant navigation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x21C5;</div>
+        <h3>Sortable Columns</h3>
+        <p>Click any column header to sort ascending or descending. Works on all data types.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F50D;</div>
+        <h3>Schema Inspector</h3>
+        <p>See column names, types, primary keys, and nullability at the top of every table view.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F4DD;</div>
+        <h3>SQL Query Panel</h3>
+        <p>Write and run arbitrary SQL queries. Results appear in a scrollable grid below.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F4E5;</div>
+        <h3>Export to CSV</h3>
+        <p>Export any table to a CSV file with one click. Full table export, not just the current page.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F3A8;</div>
+        <h3>4 Themes</h3>
+        <p>Dark, Light, Retro 3.1, and TUI. Switch instantly with the theme button or keyboard shortcut.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x2328;</div>
+        <h3>Keyboard-Driven</h3>
+        <p>Full keyboard navigation in both GUI and TUI. Open, browse, query, and export without touching the mouse.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F5A5;</div>
+        <h3>Terminal UI</h3>
+        <p>Same features in your terminal. Vim-style navigation, runs anywhere with a shell.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F310;</div>
+        <h3>Web Demo</h3>
+        <p>Try it in your browser &mdash; no install needed. SQLite runs client-side via WASM.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F512;</div>
+        <h3>Read-Only</h3>
+        <p>Your data is safe. DBiewLite never modifies your database files.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x26A1;</div>
+        <h3>Native Performance</h3>
+        <p>Built with Rust and Tauri. Small binary, low memory, instant startup.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Terminal Version -->
+  <section>
+    <h2>Terminal Version</h2>
+    <div style="max-width: 600px; margin: 0 auto; text-align: center;">
+      <p style="color: var(--text-muted); margin-bottom: 1.25rem;">DBiewLite is also available as a standalone terminal app &mdash; same table browsing, queries, and export, right in your shell.</p>
+      <div style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1rem;">
+        <code style="font-size: 0.95rem; color: var(--green);">cargo install dbiewlite-tui</code>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        Or download pre-built binaries from the <a href="https://github.com/Ivapo/DBiewLite/releases/latest">latest release</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- Keyboard Shortcuts -->
+  <section>
+    <h2>Keyboard Shortcuts</h2>
+    <div class="shortcuts-wrap">
+      <table class="shortcuts-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>GUI (Mac)</th>
+            <th>GUI (Win/Linux)</th>
+            <th>Web</th>
+            <th>TUI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Navigation -->
+          <tr class="cat-row"><td colspan="5">Navigation</td></tr>
+          <tr><td>Open database</td><td><kbd>&#8984;</kbd>+<kbd>O</kbd></td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>CLI arg</td></tr>
+          <tr><td>Toggle sidebar</td><td><kbd>&#8984;</kbd>+<kbd>B</kbd></td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td></tr>
+          <tr><td>Switch panel</td><td colspan="3">Click</td><td><kbd>Tab</kbd></td></tr>
+          <tr><td>Move up</td><td colspan="3">&mdash;</td><td><kbd>&uarr;</kbd> / <kbd>k</kbd></td></tr>
+          <tr><td>Move down</td><td colspan="3">&mdash;</td><td><kbd>&darr;</kbd> / <kbd>j</kbd></td></tr>
+          <tr><td>Select table</td><td colspan="3">Click</td><td><kbd>Enter</kbd></td></tr>
+
+          <!-- Data -->
+          <tr class="cat-row"><td colspan="5">Data</td></tr>
+          <tr><td>Sort column</td><td colspan="3">Click header</td><td><kbd>1</kbd>&ndash;<kbd>9</kbd></td></tr>
+          <tr><td>Previous page</td><td colspan="3">Click <kbd>&#9664;</kbd></td><td><kbd>&larr;</kbd> / <kbd>h</kbd></td></tr>
+          <tr><td>Next page</td><td colspan="3">Click <kbd>&#9654;</kbd></td><td><kbd>&rarr;</kbd> / <kbd>l</kbd></td></tr>
+
+          <!-- Query -->
+          <tr class="cat-row"><td colspan="5">Query</td></tr>
+          <tr><td>Enter query mode</td><td colspan="3">Click textarea</td><td><kbd>/</kbd> or <kbd>:</kbd></td></tr>
+          <tr><td>Run query</td><td><kbd>&#8984;</kbd>+<kbd>Enter</kbd></td><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><kbd>Enter</kbd></td></tr>
+          <tr><td>Exit query mode</td><td colspan="3">&mdash;</td><td><kbd>Esc</kbd> / <kbd>Tab</kbd></td></tr>
+
+          <!-- Other -->
+          <tr class="cat-row"><td colspan="5">Other</td></tr>
+          <tr><td>Export to CSV</td><td><kbd>&#8984;</kbd>+<kbd>E</kbd></td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td></tr>
+          <tr><td>Cycle theme</td><td><kbd>&#8984;</kbd>+<kbd>T</kbd></td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>&mdash;</td></tr>
+          <tr><td>Quit</td><td colspan="3">&mdash;</td><td><kbd>q</kbd></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      <a href="https://github.com/Ivapo/DBiewLite">GitHub</a>
+      &nbsp;&middot;&nbsp; v0.1.0
+      &nbsp;&middot;&nbsp; &copy; 2026 DBiewLite
+    </p>
+  </footer>
+
+</body>
+</html>

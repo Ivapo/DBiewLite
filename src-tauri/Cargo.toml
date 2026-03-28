@@ -4,8 +4,7 @@ version = "0.1.0"
 description = "A friendly SQLite viewer for data analysis"
 authors = []
 license = "MIT"
-edition = "2021"
-rust-version = "1.77.2"
+edition = "2024"
 
 [lib]
 name = "dbiewlite_app_lib"

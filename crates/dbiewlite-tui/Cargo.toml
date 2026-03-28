@@ -2,8 +2,11 @@
 name = "dbiewlite-tui"
 version = "0.1.0"
 description = "Terminal UI for DBiewLite SQLite viewer"
-edition = "2021"
+edition = "2024"
 license = "MIT"
+repository = "https://github.com/Ivapo/DBiewLite"
+keywords = ["sqlite", "database", "viewer", "tui", "terminal"]
+categories = ["command-line-utilities", "database"]
 
 [[bin]]
 name = "dbiew"
