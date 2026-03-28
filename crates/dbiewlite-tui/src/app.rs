@@ -1,4 +1,4 @@
-use dbiewlite_core::{ColumnInfo, Database, DbInfo, QueryResult, Sort, TableInfo};
+use dbiewlite_core::{Database, DbInfo, QueryResult, Sort, TableInfo};
 use ratatui::widgets::TableState;
 
 pub struct App {
@@ -20,7 +20,6 @@ pub struct App {
 
 pub struct TableView {
     pub name: String,
-    pub schema: Vec<ColumnInfo>,
     pub data: QueryResult,
     pub table_state: TableState,
     pub page: usize,
@@ -77,14 +76,12 @@ impl App {
     pub fn load_table(&mut self, index: usize) {
         if let Some(table_info) = self.tables.get(index) {
             let name = table_info.name.clone();
-            let schema = self.db.get_schema(&name).unwrap_or_default();
             let page_size = 50;
 
             match self.db.query_table(&name, page_size, 0, None) {
                 Ok(data) => {
                     self.table_view = Some(TableView {
                         name,
-                        schema,
                         data,
                         table_state: TableState::default().with_selected(Some(0)),
                         page: 0,
