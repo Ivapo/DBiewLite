@@ -106,13 +106,15 @@
       top: 100%;
       left: 50%;
       transform: translateX(-50%);
-      margin-top: 0.25rem;
+      padding-top: 0.25rem;
+      z-index: 10;
+      width: max-content;
+    }
+    .btn-dropdown .dropdown-menu-inner {
       background: var(--bg-elevated);
       border: 1px solid var(--border);
       border-radius: 8px;
       overflow: hidden;
-      z-index: 10;
-      width: max-content;
     }
     .btn-dropdown:hover .dropdown-menu,
     .btn-dropdown:focus-within .dropdown-menu {
@@ -258,10 +260,10 @@
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           macOS &#9662;
         </span>
-        <div class="dropdown-menu">
+        <div class="dropdown-menu"><div class="dropdown-menu-inner">
           <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_aarch64.dmg">Apple Silicon</a>
           <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_x64.dmg">Intel</a>
-        </div>
+        </div></div>
       </div>
       <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_x64-setup.exe" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
