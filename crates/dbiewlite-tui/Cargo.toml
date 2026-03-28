@@ -6,7 +6,7 @@ edition = "2021"
 license = "MIT"
 
 [[bin]]
-name = "dbiewlite"
+name = "dbiew"
 path = "src/main.rs"
 
 [dependencies]

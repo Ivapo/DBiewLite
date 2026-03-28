@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "DBiewLite",
   "version": "0.1.0",
-  "identifier": "com.dbiewlite.app",
+  "identifier": "com.dbiewlite",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",

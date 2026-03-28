@@ -1,5 +1,4 @@
 use dbiewlite_core::{ColumnInfo, Database, DbInfo, IndexInfo, QueryResult, Sort, TableInfo};
-use serde::Deserialize;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -39,15 +38,6 @@ pub fn get_schema(table: String, state: State<DbState>) -> Result<Vec<ColumnInfo
     let guard = state.0.lock().map_err(|e| e.to_string())?;
     let db = guard.as_ref().ok_or("No database open")?;
     db.get_schema(&table)
-}
-
-#[derive(Deserialize)]
-pub struct QueryTableArgs {
-    pub table: String,
-    pub limit: usize,
-    pub offset: usize,
-    pub sort_column: Option<String>,
-    pub sort_ascending: Option<bool>,
 }
 
 #[tauri::command]
