@@ -1,0 +1,17 @@
+[package]
+name = "dbiewlite-tui"
+version = "0.1.0"
+description = "Terminal UI for DBiewLite SQLite viewer"
+edition = "2021"
+license = "MIT"
+
+[[bin]]
+name = "dbiewlite"
+path = "src/main.rs"
+
+[dependencies]
+dbiewlite-core = { version = "0.1.0", path = "../dbiewlite-core" }
+ratatui = "0.29"
+crossterm = "0.28"
+dirs = "6"
+unicode-width = "0.2"
