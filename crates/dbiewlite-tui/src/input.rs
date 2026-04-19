@@ -81,6 +81,10 @@ fn handle_sidebar(app: &mut App, key: KeyEvent) {
             if app.sidebar_index < app.tables.len() {
                 app.load_table(app.sidebar_index);
                 app.active_panel = Panel::Data;
+            } else {
+                let view_index = app.sidebar_index - app.tables.len();
+                app.load_view(view_index);
+                app.active_panel = Panel::Data;
             }
         }
         _ => {}

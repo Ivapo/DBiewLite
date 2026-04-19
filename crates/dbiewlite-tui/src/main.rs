@@ -17,7 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: dbiewlite <path-to-sqlite-file>");
+        eprintln!("Usage: dbiewlite <path-to-database-file>");
+        eprintln!("Supports: .sqlite, .db, .sqlite3, .duckdb, .parquet, .pq");
         eprintln!("Example: dbiewlite mydata.db");
         std::process::exit(1);
     }

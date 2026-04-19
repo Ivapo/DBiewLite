@@ -148,7 +148,7 @@ function render(): void {
     app.innerHTML = `
       <div class="welcome">
         <h1>DBiewLite</h1>
-        <p>Open a SQLite database to get started</p>
+        <p>Open a database file to get started</p>
         <button id="open-btn" class="btn">Open Database</button>
       </div>
     `;
@@ -163,7 +163,7 @@ function render(): void {
     <div class="layout">
       <div class="title-bar">
         <span class="title-text">DBiewLite</span>
-        <span class="title-info">SQLite ${info.sqlite_version} \u2502 ${info.table_count} tables \u2502 <span class="title-filename">${fileName}</span> (${formatSize(info.file_size)})</span>
+        <span class="title-info">${info.engine} ${info.engine_version} \u2502 ${info.table_count} tables \u2502 <span class="title-filename">${fileName}</span> (${formatSize(info.file_size)})</span>
         <div class="title-actions">
           <button id="theme-btn" class="btn btn-sm">Theme</button>
           <button id="open-new-btn" class="btn btn-sm">Open</button>
@@ -338,7 +338,12 @@ function renderQueryPanel(): string {
 async function handleOpenFile(): Promise<void> {
   const path = await open({
     multiple: false,
-    filters: [{ name: "SQLite", extensions: ["sqlite", "db", "sqlite3"] }],
+    filters: [
+      { name: "All Databases", extensions: ["sqlite", "db", "sqlite3", "duckdb", "parquet", "pq"] },
+      { name: "SQLite", extensions: ["sqlite", "db", "sqlite3"] },
+      { name: "DuckDB", extensions: ["duckdb"] },
+      { name: "Parquet", extensions: ["parquet", "pq"] },
+    ],
   });
   if (path) {
     await openDatabase(path);

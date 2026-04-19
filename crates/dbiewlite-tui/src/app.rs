@@ -84,25 +84,33 @@ impl App {
 
     pub fn load_table(&mut self, index: usize) {
         if let Some(table_info) = self.tables.get(index) {
-            let name = table_info.name.clone();
-            let page_size = 50;
+            self.load_by_name(&table_info.name.clone());
+        }
+    }
 
-            match self.db.query_table(&name, page_size, 0, None) {
-                Ok(data) => {
-                    self.table_view = Some(TableView {
-                        name,
-                        data,
-                        table_state: TableState::default().with_selected(Some(0)),
-                        page: 0,
-                        page_size,
-                        sort: None,
-                        sort_col_index: None,
-                    });
-                    self.status_message = None;
-                }
-                Err(e) => {
-                    self.set_status(format!("Error: {}", e));
-                }
+    pub fn load_view(&mut self, view_index: usize) {
+        if let Some(name) = self.views.get(view_index) {
+            self.load_by_name(&name.clone());
+        }
+    }
+
+    fn load_by_name(&mut self, name: &str) {
+        let page_size = 50;
+        match self.db.query_table(name, page_size, 0, None) {
+            Ok(data) => {
+                self.table_view = Some(TableView {
+                    name: name.to_string(),
+                    data,
+                    table_state: TableState::default().with_selected(Some(0)),
+                    page: 0,
+                    page_size,
+                    sort: None,
+                    sort_col_index: None,
+                });
+                self.status_message = None;
+            }
+            Err(e) => {
+                self.set_status(format!("Error: {}", e));
             }
         }
     }

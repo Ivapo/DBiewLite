@@ -1,7 +1,7 @@
 [package]
 name = "dbiewlite-core"
 version = "0.1.0"
-description = "Shared SQLite operations for DBiewLite"
+description = "Shared database operations for DBiewLite (SQLite, DuckDB, Parquet)"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/Ivapo/DBiewLite"
@@ -12,4 +12,5 @@ categories = ["database"]
 
 [dependencies]
 rusqlite = { version = "0.34", features = ["bundled"] }
+duckdb = { version = "1", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }

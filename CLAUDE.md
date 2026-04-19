@@ -1,14 +1,14 @@
 # DBiewLite
 
-A friendly SQLite database viewer for data analysis, built with Tauri v2 + Rust + TypeScript.
+A friendly database viewer for SQLite, DuckDB, and Parquet files, built with Tauri v2 + Rust + TypeScript.
 
 ## What This Is
 
-A desktop + terminal app that opens `.sqlite`/`.db` files and lets you visually browse tables, inspect schemas, run SQL queries, and export data to CSV. Read-only.
+A desktop + terminal app that opens `.sqlite`/`.db`/`.duckdb`/`.parquet` files and lets you visually browse tables, inspect schemas, run SQL queries, and export data to CSV. Read-only.
 
 ## Tech Stack
 
-- **Backend:** Rust (Tauri v2, `rusqlite` with bundled SQLite)
+- **Backend:** Rust (Tauri v2, `rusqlite` with bundled SQLite, `duckdb` with bundled DuckDB)
 - **Frontend:** TypeScript + HTML/CSS (no framework)
 - **TUI:** `ratatui` + `crossterm` (terminal UI, same pattern as PanEx)
 - **Package managers:** Cargo (Rust), Bun (frontend)
@@ -16,7 +16,7 @@ A desktop + terminal app that opens `.sqlite`/`.db` files and lets you visually 
 
 ## Architecture
 
-- `dbiewlite-core`: Shared Rust library for all SQLite operations (used by both GUI and TUI)
+- `dbiewlite-core`: Shared Rust library for all database operations — `Database` enum dispatches to `SqliteBackend` or `DuckdbBackend` (used by both GUI and TUI)
 - `src-tauri`: Tauri v2 app — thin command wrappers around core
 - `src/`: Frontend — vanilla TS, renders sidebar + data grid + query panel
 - `dbiewlite-tui`: Terminal UI with ratatui — same features as GUI
@@ -28,8 +28,12 @@ A desktop + terminal app that opens `.sqlite`/`.db` files and lets you visually 
 DBiewLite/
 ├── Cargo.toml              # Workspace root
 ├── crates/
-│   ├── dbiewlite-core/     # Shared SQLite logic
-│   │   └── src/lib.rs      # Database, TableInfo, QueryResult, export_csv, etc.
+│   ├── dbiewlite-core/     # Shared database logic
+│   │   └── src/
+│   │       ├── lib.rs          # Database enum, file-type detection, dispatch
+│   │       ├── types.rs        # Shared types (DbInfo, TableInfo, QueryResult, etc.)
+│   │       ├── sqlite.rs       # SqliteBackend (rusqlite)
+│   │       └── duckdb_backend.rs # DuckdbBackend (duckdb, also handles Parquet)
 │   └── dbiewlite-tui/      # Terminal UI
 │       └── src/
 │           ├── main.rs      # Terminal setup, event loop
@@ -65,7 +69,7 @@ DBiewLite/
 ## Conventions
 
 - Use `snake_case` for Rust, `camelCase` for TypeScript
-- All SQLite access through Rust via `dbiewlite-core` — never from TS directly
+- All database access through Rust via `dbiewlite-core` — never from TS directly
 - Tauri commands are thin wrappers around core functions
 - Type all `invoke` responses — interfaces in `types.ts` mirror Rust structs
 - Vanilla TS — no React/Vue/Svelte
@@ -84,7 +88,7 @@ bun run tauri dev
 # Build for production (GUI)
 bun run tauri build
 
-# Run TUI
+# Run TUI (supports .sqlite, .db, .duckdb, .parquet)
 cargo run -p dbiewlite-tui -- path/to/database.sqlite
 
 # Build TUI binary

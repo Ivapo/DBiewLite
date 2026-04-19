@@ -349,7 +349,7 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     // Right side: SQLite version │ N tables │ file.db (size)
     let dim = Style::default().fg(Color::DarkGray);
     let right_spans: Vec<Span> = vec![
-        Span::styled(format!("SQLite {}", app.db_info.sqlite_version), dim),
+        Span::styled(format!("{} {}", app.db_info.engine, app.db_info.engine_version), dim),
         Span::styled(" \u{2502} ", dim),
         Span::styled(format!("{} tables", app.db_info.table_count), dim),
         Span::styled(" \u{2502} ", dim),

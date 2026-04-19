@@ -1,9 +1,10 @@
 export interface DbInfo {
   path: string;
   file_size: number;
-  sqlite_version: string;
-  page_count: number;
-  page_size: number;
+  engine: string;
+  engine_version: string;
+  page_count: number | null;
+  page_size: number | null;
   table_count: number;
 }
 
