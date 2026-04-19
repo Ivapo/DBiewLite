@@ -1,13 +1,13 @@
 [package]
 name = "dbiewlite-tui"
 version = "0.1.0"
-description = "Terminal UI for DBiewLite SQLite viewer"
+description = "Terminal UI for DBiewLite — viewer for SQLite, DuckDB, and Parquet files"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/Ivapo/DBiewLite"
 homepage = "https://ivapo.github.io/DBiewLite/"
 readme = "README.md"
-keywords = ["sqlite", "database", "viewer", "tui", "terminal"]
+keywords = ["sqlite", "duckdb", "parquet", "database", "viewer"]
 categories = ["command-line-utilities", "database"]
 
 [[bin]]

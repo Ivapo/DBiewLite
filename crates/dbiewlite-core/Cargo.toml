@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/Ivapo/DBiewLite"
 homepage = "https://ivapo.github.io/DBiewLite/"
 readme = "README.md"
-keywords = ["sqlite", "database", "viewer", "tui"]
+keywords = ["sqlite", "duckdb", "parquet", "database", "viewer"]
 categories = ["database"]
 
 [dependencies]

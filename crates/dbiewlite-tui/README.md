@@ -1,6 +1,6 @@
 # dbiewlite-tui
 
-Terminal UI for [DBiewLite](https://ivapo.github.io/DBiewLite/) — a friendly, read-only SQLite database viewer.
+Terminal UI for [DBiewLite](https://ivapo.github.io/DBiewLite/) — a friendly, read-only database viewer for SQLite, DuckDB, and Parquet files.
 
 ## Install
 
@@ -11,7 +11,7 @@ cargo install dbiewlite-tui
 ## Usage
 
 ```bash
-dbiew path/to/database.sqlite
+dbiew path/to/file.sqlite    # or .duckdb, .parquet
 ```
 
 ## Features

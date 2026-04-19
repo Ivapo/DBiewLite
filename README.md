@@ -2,13 +2,13 @@
 
 **[Website](https://ivapo.github.io/DBiewLite/)**
 
-A friendly, read-only SQLite database viewer for data analysis. Browse tables, inspect schemas, run SQL queries, and export to CSV — in a desktop GUI, your terminal, or the browser.
+A friendly, read-only database viewer for data analysis. Open SQLite, DuckDB, and Parquet files — browse tables, inspect schemas, run SQL queries, and export to CSV — in a desktop GUI, your terminal, or the browser.
 
 Built with Tauri v2 + Rust + TypeScript.
 
 ## Features
 
-- Open `.sqlite` / `.db` files and browse tables with row counts
+- Open `.sqlite` / `.db` / `.duckdb` / `.parquet` files and browse tables with row counts
 - Paginated, sortable data grid
 - Schema inspector showing column types, primary keys, nullability
 - SQL query panel with results grid
@@ -38,7 +38,7 @@ cargo install dbiewlite-tui
 Then run:
 
 ```bash
-dbiew path/to/database.sqlite
+dbiew path/to/database.sqlite    # or .duckdb, .parquet
 ```
 
 See the [TUI README](crates/dbiewlite-tui/README.md) for details.
@@ -61,7 +61,7 @@ See the [TUI README](crates/dbiewlite-tui/README.md) for details.
 
 ## Tech Stack
 
-- **Backend:** Rust (Tauri v2, rusqlite with bundled SQLite)
+- **Backend:** Rust (Tauri v2, rusqlite with bundled SQLite, duckdb with bundled DuckDB)
 - **Frontend:** TypeScript + HTML/CSS (no framework)
 - **TUI:** ratatui + crossterm
 - **Web:** sql.js (SQLite compiled to WASM)
@@ -84,7 +84,7 @@ bun run tauri build    # production
 ### TUI (Terminal)
 
 ```bash
-cargo run -p dbiewlite-tui -- path/to/database.sqlite
+cargo run -p dbiewlite-tui -- path/to/database.sqlite  # or .duckdb, .parquet
 ```
 
 ## Support
