@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DBiewLite — SQLite Database Viewer</title>
-  <meta name="description" content="A friendly, read-only SQLite database viewer. Browse tables, inspect schemas, run SQL queries, and export to CSV — as a desktop app, in your terminal, or in the browser.">
+  <title>DBiewLite — Database Viewer for SQLite, DuckDB &amp; Parquet</title>
+  <meta name="description" content="A friendly, read-only database viewer for SQLite, DuckDB, and Parquet files. Browse tables, inspect schemas, run SQL queries, and export to CSV — as a desktop app, in your terminal, or in the browser.">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -251,8 +251,8 @@
 
   <!-- Hero -->
   <header class="hero">
-    <h1><span>DBiewLite</span> <span class="version">v0.1.0</span></h1>
-    <p class="tagline">A friendly, read-only SQLite database viewer for data analysis.</p>
+    <h1><span>DBiewLite</span> <span class="version">v0.2.0</span></h1>
+    <p class="tagline">A friendly, read-only database viewer for SQLite, DuckDB, and Parquet files.</p>
 
     <div class="btn-row">
       <div class="btn-dropdown">
@@ -261,15 +261,15 @@
           macOS &#9662;
         </span>
         <div class="dropdown-menu"><div class="dropdown-menu-inner">
-          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_aarch64.dmg">Apple Silicon</a>
-          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_x64.dmg">Intel</a>
+          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_aarch64.dmg">Apple Silicon</a>
+          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_x64.dmg">Intel</a>
         </div></div>
       </div>
-      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_x64-setup.exe" class="btn btn-primary">
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_x64-setup.exe" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Windows
       </a>
-      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.1.0_amd64.AppImage" class="btn btn-primary">
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_amd64.AppImage" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Linux
       </a>
@@ -312,7 +312,12 @@
       <div class="feature-card">
         <div class="icon">&#x1F4C2;</div>
         <h3>Browse Tables</h3>
-        <p>Sidebar with all tables, views, and indexes. Row counts at a glance.</p>
+        <p>Sidebar with all tables and views. Row counts at a glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F4BE;</div>
+        <h3>Multiple Formats</h3>
+        <p>Open SQLite, DuckDB, and Parquet files. Format detected automatically by extension.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x25A3;</div>
@@ -422,7 +427,7 @@
   <footer>
     <p>
       <a href="https://github.com/Ivapo/DBiewLite">GitHub</a>
-      &nbsp;&middot;&nbsp; v0.1.0
+      &nbsp;&middot;&nbsp; v0.2.0
       &nbsp;&middot;&nbsp; &copy; 2026 DBiewLite
     </p>
   </footer>

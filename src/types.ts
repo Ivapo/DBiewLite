@@ -46,7 +46,6 @@ export interface AppState {
   dbInfo: DbInfo | null;
   tables: TableInfo[];
   views: string[];
-  indexes: IndexInfo[];
   selectedTable: string | null;
   schema: ColumnInfo[];
   data: QueryResult | null;

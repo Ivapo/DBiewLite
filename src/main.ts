@@ -1,13 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { AppState, DbInfo, TableInfo, ColumnInfo, QueryResult, IndexInfo } from "./types";
+import type { AppState, DbInfo, TableInfo, ColumnInfo, QueryResult } from "./types";
 import { initTheme, cycleTheme } from "./theme";
 
 const state: AppState = {
   dbInfo: null,
   tables: [],
   views: [],
-  indexes: [],
   selectedTable: null,
   schema: [],
   data: null,
@@ -31,7 +30,7 @@ async function openDatabase(path: string): Promise<void> {
     state.dbInfo = await invoke<DbInfo>("open_database", { path });
     state.tables = await invoke<TableInfo[]>("list_tables");
     state.views = await invoke<string[]>("list_views");
-    state.indexes = await invoke<IndexInfo[]>("list_indexes");
+    state.indexes = [];
     state.selectedTable = null;
     state.data = null;
     state.schema = [];
@@ -54,6 +53,7 @@ async function selectTable(name: string): Promise<void> {
   state.sort = null;
   state.schema = await invoke<ColumnInfo[]>("get_schema", { table: name });
   await loadTableData();
+  render();
 }
 
 async function loadTableData(): Promise<void> {
@@ -186,20 +186,9 @@ function render(): void {
             <div class="sidebar-section">
               <div class="sidebar-header">Views</div>
               ${state.views.map(v => `
-                <div class="sidebar-item sidebar-view">
+                <div class="sidebar-item sidebar-view" data-table="${v}">
                   <span class="sidebar-icon">\u{f06e}</span>
                   <span class="sidebar-name">${v}</span>
-                </div>
-              `).join("")}
-            </div>
-          ` : ""}
-          ${state.indexes.length > 0 ? `
-            <div class="sidebar-section">
-              <div class="sidebar-header">Indexes</div>
-              ${state.indexes.map(idx => `
-                <div class="sidebar-item sidebar-index">
-                  <span class="sidebar-icon">\u{f0cb}</span>
-                  <span class="sidebar-name">${idx.name}</span>
                 </div>
               `).join("")}
             </div>
