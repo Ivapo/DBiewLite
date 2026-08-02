@@ -3,9 +3,9 @@ mod input;
 mod ui;
 
 use std::io;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use crossterm::event::{self, Event};
+use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -13,71 +13,157 @@ use crossterm::terminal::{
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = std::env::args().collect();
+fn print_help() {
+    println!(
+        "dbiew {version}
+A friendly viewer for SQLite, DuckDB, and Parquet files.
 
-    if args.len() < 2 {
-        eprintln!("Usage: dbiewlite <path-to-database-file>");
-        eprintln!("Supports: .sqlite, .db, .sqlite3, .duckdb, .parquet, .pq");
-        eprintln!("Example: dbiewlite mydata.db");
+USAGE:
+    dbiew <FILE>
+
+ARGS:
+    <FILE>    Database to open (.sqlite, .db, .sqlite3, .duckdb, .parquet, .pq)
+
+OPTIONS:
+    -h, -H, --help       Print this help
+    -V, -v, --version    Print version
+
+EXAMPLE:
+    dbiew mydata.db
+
+Press ? inside the app for keyboard shortcuts.",
+        version = env!("CARGO_PKG_VERSION"),
+    );
+}
+
+/// Resolves the file to open, handling `--help`/`--version` first. Every branch
+/// that isn't a path exits the process, so this must run before raw mode — a
+/// `println!` on the alternate screen would be wiped on exit.
+fn parse_args() -> String {
+    let Some(arg) = std::env::args().nth(1) else {
+        eprintln!("dbiew: missing database file");
+        eprintln!("Try 'dbiew --help' for usage.");
         std::process::exit(1);
+    };
+
+    match arg.as_str() {
+        "-h" | "-H" | "--help" => {
+            print_help();
+            std::process::exit(0);
+        }
+        "-V" | "-v" | "--version" => {
+            println!("dbiew {}", env!("CARGO_PKG_VERSION"));
+            std::process::exit(0);
+        }
+        other if other.starts_with('-') => {
+            eprintln!("dbiew: unrecognized argument '{other}'");
+            eprintln!("Try 'dbiew --help' for usage.");
+            std::process::exit(2);
+        }
+        other => other.to_string(),
     }
+}
 
-    let db_path = &args[1];
+/// Put the terminal back the way we found it. Safe to call more than once.
+fn restore_terminal() {
+    let _ = disable_raw_mode();
+    let _ = execute!(io::stdout(), DisableMouseCapture, LeaveAlternateScreen);
+    let _ = execute!(io::stdout(), crossterm::cursor::Show);
+}
 
-    // Setup terminal
+/// Without this, a panic unwinds straight past the cleanup at the end of
+/// `main`, leaving the user on the alternate screen in raw mode — the shell
+/// looks dead and the panic message is never seen.
+fn install_panic_hook() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        restore_terminal();
+        default_hook(info);
+    }));
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = parse_args();
+    install_panic_hook();
+
+    // Setup terminal. Mouse capture is what makes wheel and horizontal
+    // trackpad scrolling reach us instead of the terminal emulator.
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app
-    let mut app = match app::App::new(db_path) {
+    let mut app = match app::App::new(&db_path) {
         Ok(a) => a,
         Err(e) => {
-            disable_raw_mode()?;
-            execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-            terminal.show_cursor()?;
+            restore_terminal();
             eprintln!("Failed to open database: {}", e);
             std::process::exit(1);
         }
     };
 
-    // Event loop
-    let tick_rate = Duration::from_millis(100);
-    let mut last_tick = Instant::now();
+    // Event loop — render on demand only. Idle costs no CPU.
+    let status_ttl = Duration::from_secs(3);
+    let idle_timeout = Duration::from_secs(60);
+    terminal.draw(|f| ui::draw(f, &mut app))?;
 
     loop {
-        terminal.draw(|f| ui::draw(f, &mut app))?;
+        // Wake either for the next event or when the status message expires.
+        let timeout = match app.status_message_at {
+            Some(at) => status_ttl.saturating_sub(at.elapsed()),
+            None => idle_timeout,
+        };
 
-        let timeout = tick_rate.saturating_sub(last_tick.elapsed());
+        let mut dirty = false;
+
         if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                input::handle_key(&mut app, key);
+            // Drain every pending event before redrawing so bursts (trackpad
+            // scrolling, key repeat) coalesce into a single frame.
+            loop {
+                match event::read()? {
+                    Event::Key(key) => {
+                        input::handle_key(&mut app, key);
+                        dirty = true;
+                    }
+                    Event::Mouse(mouse) => {
+                        if input::handle_mouse(&mut app, mouse) {
+                            dirty = true;
+                        }
+                    }
+                    Event::Resize(_, _) => dirty = true,
+                    _ => {}
+                }
+                if app.should_quit || !event::poll(Duration::ZERO)? {
+                    break;
+                }
             }
         }
 
-        if last_tick.elapsed() >= tick_rate {
-            last_tick = Instant::now();
+        // Deferred until the burst is drained, so holding `j` in the sidebar
+        // queries the database once instead of once per key repeat.
+        if app.flush_pending_load() {
+            dirty = true;
         }
 
         // Auto-clear status message after 3 seconds
-        if let Some(at) = app.status_message_at {
-            if at.elapsed() >= Duration::from_secs(3) {
-                app.status_message = None;
-                app.status_message_at = None;
-            }
+        if let Some(at) = app.status_message_at
+            && at.elapsed() >= status_ttl
+        {
+            app.status_message = None;
+            app.status_message_at = None;
+            dirty = true;
         }
 
         if app.should_quit {
             break;
         }
+
+        if dirty {
+            terminal.draw(|f| ui::draw(f, &mut app))?;
+        }
     }
 
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
+    restore_terminal();
     Ok(())
 }

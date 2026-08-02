@@ -1,6 +1,6 @@
 [package]
 name = "dbiewlite-tui"
-version = "0.2.1"
+version = "0.3.0"
 description = "Terminal UI for DBiewLite — viewer for SQLite, DuckDB, and Parquet files"
 edition = "2024"
 license = "MIT"

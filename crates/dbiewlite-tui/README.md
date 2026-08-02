@@ -12,32 +12,54 @@ cargo install dbiewlite-tui
 
 ```bash
 dbiew path/to/file.sqlite    # or .duckdb, .parquet
+dbiew --help
+dbiew --version
 ```
 
 ## Features
 
-- Browse tables with row counts
-- Paginated, sortable data grid
+- Browse tables with row counts — contents load as you move through the list
+- Paginated, sortable data grid with horizontal scrolling for wide tables
+- Scrollbars on both panels
 - Schema inspector (column types, PKs, nullability)
+- Details panel (`i`) — size, engine, tables, views, indexes, row totals
 - SQL query input with results
 - Export tables to CSV
 - Vim-style navigation (`j`/`k`, `h`/`l`)
+- Mouse and trackpad support
 
 ## Keyboard Shortcuts
 
+Press `?` inside the app for the full list.
+
 | Action | Key |
 |---|---|
+| Help | `?` |
+| Database details | `i` |
 | Quit | `q` |
 | Switch panel | `Tab` |
 | Navigate up/down | `↑`/`↓` or `k`/`j` |
-| Select table | `Enter` |
-| Prev/next page | `←`/`→` or `h`/`l` |
-| Sort by column | `1`–`9` |
+| Focus data grid | `Enter` |
+| Move column cursor | `←`/`→` or `h`/`l` |
+| Pan sideways | `Shift`+`←`/`→` or `H`/`L` |
+| Sort by cursor column | `s` |
+| First/last column | `Home`/`End` |
+| Half screen up/down | `Ctrl+U`/`Ctrl+D` |
+| Prev/next page | `PgUp`/`PgDn` or `[`/`]` |
+| First/last row | `g`/`G` |
 | Enter query mode | `/` or `:` |
 | Run query | `Enter` |
 | Exit query mode | `Esc` or `Tab` |
-| Toggle sidebar | `Ctrl+B` |
+| Toggle tables panel | `Ctrl+B` |
 | Export CSV | `Ctrl+E` |
+
+## Mouse
+
+| Action | Input |
+|---|---|
+| Scroll rows | Wheel / two-finger scroll |
+| Pan sideways | Horizontal swipe or `Shift`+wheel |
+| Select row and column | Click a cell or header |
 
 ## License
 

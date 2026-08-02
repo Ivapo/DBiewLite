@@ -51,11 +51,16 @@ See the [TUI README](crates/dbiewlite-tui/README.md) for details.
 | Toggle sidebar | `Cmd+B` | `Ctrl+B` | `Ctrl+B` |
 | Switch panel | Click | Click | `Tab` |
 | Navigate up/down | — | — | `↑`/`↓` or `k`/`j` |
-| Sort column | Click header | Click header | `1`–`9` |
-| Prev/next page | Click `◀`/`▶` | Click `◀`/`▶` | `←`/`→` or `h`/`l` |
+| Move column cursor | — | — | `←`/`→` or `h`/`l` |
+| Pan sideways | — | — | `Shift`+`←`/`→` or `H`/`L` |
+| Sort column | Click header | Click header | `s` |
+| Half screen up/down | — | — | `Ctrl+U`/`Ctrl+D` |
+| Prev/next page | Click `◀`/`▶` | Click `◀`/`▶` | `PgUp`/`PgDn` or `[`/`]` |
 | Enter query mode | Click textarea | Click textarea | `/` or `:` |
 | Run query | `Cmd+Enter` | `Ctrl+Enter` | `Enter` |
 | Export to CSV | `Cmd+E` | `Ctrl+E` | `Ctrl+E` |
+| Database details | — | — | `i` |
+| Show help | — | — | `?` |
 | Cycle theme | `Cmd+T` | `Ctrl+T` | — |
 | Quit | — | — | `q` |
 
@@ -85,6 +90,15 @@ bun run tauri build    # production
 
 ```bash
 cargo run -p dbiewlite-tui -- path/to/database.sqlite  # or .duckdb, .parquet
+```
+
+Need something to browse? This generates a demo database that exercises every
+feature — 28 tables, a 27-column table, 12k rows, NULLs, BLOBs and wide
+characters. The file itself is not tracked:
+
+```bash
+python3 scripts/make_sample_db.py
+cargo run -p dbiewlite-tui -- samples/sample.db
 ```
 
 ## Support

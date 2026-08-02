@@ -6,4 +6,6 @@ bun.lock
 *.db
 !samples/*.sqlite
 !samples/*.db
+# Generated on demand by scripts/make_sample_db.py — too big to track.
+samples/sample.db
 web/src/public/
