@@ -16,7 +16,12 @@ const state: AppState = {
   queryInput: "",
   queryResult: null,
   queryError: null,
+  detailsOpen: false,
 };
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -53,6 +58,7 @@ async function selectTable(name: string): Promise<void> {
   state.sort = null;
   state.schema = await invoke<ColumnInfo[]>("get_schema", { table: name });
   await loadTableData();
+  pendingScroll = "top";
   render();
 }
 
@@ -75,25 +81,122 @@ async function toggleSort(column: string): Promise<void> {
   }
   state.page = 0;
   await loadTableData();
+  pendingScroll = "top";
   render();
 }
 
-async function nextPage(): Promise<void> {
-  if (!state.data?.total_rows) return;
+/// Returns whether the page actually advanced.
+async function nextPage(): Promise<boolean> {
+  if (!state.data?.total_rows) return false;
   const maxPage = Math.floor((state.data.total_rows - 1) / state.pageSize);
-  if (state.page < maxPage) {
-    state.page++;
-    await loadTableData();
-    render();
-  }
+  if (state.page >= maxPage) return false;
+  state.page++;
+  await loadTableData();
+  render();
+  return true;
 }
 
-async function prevPage(): Promise<void> {
-  if (state.page > 0) {
-    state.page--;
-    await loadTableData();
-    render();
+/// Returns whether the page actually moved back.
+async function prevPage(): Promise<boolean> {
+  if (state.page === 0) return false;
+  state.page--;
+  await loadTableData();
+  render();
+  return true;
+}
+
+// --- scroll-to-turn ----------------------------------------------------
+//
+// The grid scrolls within a page and rolls over at the edges, the same model
+// the TUI uses. render() rebuilds the table wholesale, so the landing position
+// is stashed here and applied once the new DOM exists.
+
+/// How close to an edge counts as reaching it.
+const EDGE_SLACK_PX = 24;
+/// Fallback row height, for when the page has no rows to measure.
+const FALLBACK_ROW_PX = 29;
+
+let pageTurning = false;
+let pendingScroll: "top" | "bottom" | null = null;
+/// The edge already acted on. Turning a page lands against the opposite edge,
+/// which would otherwise read as a fresh arrival and turn again immediately —
+/// so a turn only fires when the grid *enters* an edge it was not already at.
+let settledEdge: "top" | "bottom" | null = null;
+
+function tableWrapper(): HTMLElement | null {
+  return document.querySelector(".table-wrapper");
+}
+
+function applyPendingScroll(carried: number): void {
+  const wrapper = tableWrapper();
+  if (!wrapper) {
+    pendingScroll = null;
+    return;
   }
+  // Renders that are not page turns — toggling the details strip, running a
+  // query — should leave the reader where they were.
+  wrapper.scrollTop = pendingScroll === "bottom"
+    ? Math.max(0, wrapper.scrollHeight - wrapper.clientHeight)
+    : pendingScroll === "top" ? 0 : carried;
+  pendingScroll = null;
+  // Whatever edge the rebuilt grid is resting against counts as already
+  // reached, so the first scroll event afterwards is not read as an arrival.
+  const atTop = wrapper.scrollTop <= EDGE_SLACK_PX;
+  const atBottom = wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - EDGE_SLACK_PX;
+  settledEdge = atBottom ? "bottom" : atTop ? "top" : null;
+}
+
+async function turnPage(direction: 1 | -1): Promise<void> {
+  if (pageTurning) return;
+  pageTurning = true;
+  // Set before the fetch: nextPage/prevPage render as they return, and the
+  // render is what applies it.
+  pendingScroll = direction === 1 ? "top" : "bottom";
+  const moved = direction === 1 ? await nextPage() : await prevPage();
+  if (!moved) pendingScroll = null;
+  pageTurning = false;
+}
+
+function onTableScroll(wrapper: HTMLElement): void {
+  if (pageTurning) return;
+  // A page too short to scroll has no edges to arrive at; without this the
+  // grid would turn straight through every remaining page.
+  if (wrapper.scrollHeight <= wrapper.clientHeight) return;
+
+  const atTop = wrapper.scrollTop <= EDGE_SLACK_PX;
+  const atBottom = wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - EDGE_SLACK_PX;
+  const edge = atBottom ? "bottom" : atTop ? "top" : null;
+
+  if (edge === settledEdge) return;
+  settledEdge = edge;
+  if (edge === "bottom") void turnPage(1);
+  else if (edge === "top") void turnPage(-1);
+}
+
+/// Scrolls the grid by whole rows, rolling over the page edge like the TUI's
+/// cursor does.
+function scrollByRows(rows: number): void {
+  const wrapper = tableWrapper();
+  if (!wrapper) return;
+  const firstRow = wrapper.querySelector("tbody tr") as HTMLElement | null;
+  const rowHeight = firstRow?.offsetHeight || FALLBACK_ROW_PX;
+  const before = wrapper.scrollTop;
+  wrapper.scrollTop += rows * rowHeight;
+  // Already pinned against the edge, so no scroll event will fire to notice it.
+  if (wrapper.scrollTop === before) onTableScroll(wrapper);
+}
+
+/// Jumps to the first or last row of the whole table.
+async function goToEdgeRow(which: "first" | "last"): Promise<void> {
+  if (!state.data?.total_rows) return;
+  const maxPage = Math.floor((state.data.total_rows - 1) / state.pageSize);
+  const target = which === "first" ? 0 : maxPage;
+  pendingScroll = which === "first" ? "top" : "bottom";
+  if (state.page !== target) {
+    state.page = target;
+    await loadTableData();
+  }
+  render();
 }
 
 async function runQuery(): Promise<void> {
@@ -141,8 +244,32 @@ function cellClass(val: unknown): string {
   return "cell-text";
 }
 
+function renderDbDetails(info: DbInfo): string {
+  const rows: [string, string][] = [
+    ["Path", escapeHtml(info.path)],
+    ["Engine", `${info.engine} ${info.engine_version}`],
+    ["Size", formatSize(info.file_size)],
+    ["Tables", `${info.table_count}${state.views.length > 0 ? ` │ ${state.views.length} views` : ""}`],
+  ];
+  if (info.page_count !== null) rows.push(["Pages", String(info.page_count)]);
+  if (info.page_size !== null) rows.push(["Page size", `${info.page_size} B`]);
+
+  return `
+    <div id="db-details" class="db-details">
+      <dl class="db-details-grid">
+        ${rows.map(([label, value]) => `
+          <dt>${label}</dt>
+          <dd>${value}</dd>
+        `).join("")}
+      </dl>
+      <div class="db-details-hint">⌘O open another database</div>
+    </div>
+  `;
+}
+
 function render(): void {
   const app = document.getElementById("app")!;
+  const carriedScroll = tableWrapper()?.scrollTop ?? 0;
 
   if (!state.dbInfo) {
     app.innerHTML = `
@@ -162,13 +289,15 @@ function render(): void {
   app.innerHTML = `
     <div class="layout">
       <div class="title-bar">
-        <span class="title-text">DBiewLite</span>
-        <span class="title-info">${info.engine} ${info.engine_version} \u2502 ${info.table_count} tables \u2502 <span class="title-filename">${fileName}</span> (${formatSize(info.file_size)})</span>
+        <button id="db-details-toggle" class="db-title" aria-expanded="${state.detailsOpen}" aria-controls="db-details">
+          <span class="db-title-name">${escapeHtml(fileName)}</span>
+          <span class="db-chevron ${state.detailsOpen ? "open" : ""}">\u203a</span>
+        </button>
         <div class="title-actions">
           <button id="theme-btn" class="btn btn-sm">Theme</button>
-          <button id="open-new-btn" class="btn btn-sm">Open</button>
         </div>
       </div>
+      ${state.detailsOpen ? renderDbDetails(info) : ""}
       <div id="status-toast" class="status-toast hidden"></div>
       <div class="main-area">
         <div class="sidebar">
@@ -204,7 +333,10 @@ function render(): void {
 
   // Bind events
   document.getElementById("theme-btn")?.addEventListener("click", () => { cycleTheme(); });
-  document.getElementById("open-new-btn")?.addEventListener("click", handleOpenFile);
+  document.getElementById("db-details-toggle")?.addEventListener("click", () => {
+    state.detailsOpen = !state.detailsOpen;
+    render();
+  });
 
   document.querySelectorAll(".sidebar-item[data-table]").forEach(el => {
     el.addEventListener("click", () => {
@@ -220,9 +352,15 @@ function render(): void {
     });
   });
 
-  document.getElementById("prev-page")?.addEventListener("click", prevPage);
-  document.getElementById("next-page")?.addEventListener("click", nextPage);
+  document.getElementById("prev-page")?.addEventListener("click", () => { void turnPage(-1); });
+  document.getElementById("next-page")?.addEventListener("click", () => { void turnPage(1); });
   document.getElementById("export-btn")?.addEventListener("click", exportCsv);
+
+  const wrapper = tableWrapper();
+  if (wrapper) {
+    wrapper.addEventListener("scroll", () => { onTableScroll(wrapper); });
+  }
+  applyPendingScroll(carriedScroll);
 
   const queryInput = document.getElementById("query-input") as HTMLTextAreaElement | null;
   if (queryInput) {
@@ -364,7 +502,58 @@ function setupKeyboardShortcuts(): void {
       e.preventDefault();
       exportCsv();
     }
+
+    // Everything below is unmodified keys acting on the grid, so they only
+    // apply when the query box does not have the keystroke.
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+    if (isTypingTarget(document.activeElement)) return;
+    if (!state.dbInfo) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+      case "j":
+        e.preventDefault();
+        scrollByRows(1);
+        break;
+      case "ArrowUp":
+      case "k":
+        e.preventDefault();
+        scrollByRows(-1);
+        break;
+      case "PageDown":
+      case "]":
+        e.preventDefault();
+        void turnPage(1);
+        break;
+      case "PageUp":
+      case "[":
+        e.preventDefault();
+        void turnPage(-1);
+        break;
+      case "g":
+        e.preventDefault();
+        void goToEdgeRow("first");
+        break;
+      case "G":
+        e.preventDefault();
+        void goToEdgeRow("last");
+        break;
+      case "/":
+      case ":":
+        e.preventDefault();
+        document.getElementById("query-input")?.focus();
+        break;
+      case "i":
+        e.preventDefault();
+        state.detailsOpen = !state.detailsOpen;
+        render();
+        break;
+    }
   });
+}
+
+function isTypingTarget(el: Element | null): boolean {
+  return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
 }
 
 function init(): void {

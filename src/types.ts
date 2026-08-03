@@ -55,4 +55,5 @@ export interface AppState {
   queryInput: string;
   queryResult: QueryResult | null;
   queryError: string | null;
+  detailsOpen: boolean;
 }

@@ -113,19 +113,67 @@ body {
   -webkit-app-region: drag;
 }
 
-.title-text {
+.db-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 2px var(--spacing-md) 2px var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
 }
 
-.title-info {
+.db-title:hover {
+  background: var(--bg-hover);
+}
+
+.db-chevron {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.db-chevron.open {
+  transform: rotate(90deg);
+}
+
+.db-details {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   font-size: 12px;
+}
+
+.db-details-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--spacing-md);
+  min-width: 0;
+}
+
+.db-details-grid dt {
   color: var(--text-secondary);
 }
 
-.title-filename {
+.db-details-grid dd {
   color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.db-details-hint {
+  flex-shrink: 0;
+  color: var(--text-secondary);
 }
 
 .title-actions {
@@ -479,10 +527,17 @@ body {
   border-bottom-color: var(--accent);
 }
 
-[data-theme="3.1"] .title-text {
+[data-theme="3.1"] .db-title {
   color: #ffffff;
+}
+
+[data-theme="3.1"] .db-title-name {
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+[data-theme="3.1"] .db-title:hover {
+  background: #003d7a;
 }
 
 [data-theme="3.1"] .sidebar-item.active {
