@@ -1,7 +1,6 @@
 target/
 dist/
 node_modules/
-bun.lock
 *.sqlite
 *.db
 !samples/*.sqlite
