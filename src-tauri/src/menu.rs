@@ -4,12 +4,14 @@ use tauri::{AppHandle, Emitter, Runtime};
 /// Item ids, matched again in the event handler below.
 const OPEN_ID: &str = "file_open";
 const EXPORT_ID: &str = "file_export";
+const SHORTCUTS_ID: &str = "help_shortcuts";
 
 /// Events the frontend listens for. Opening a file and writing the CSV are
 /// already whole flows in TypeScript, so the menu forwards to them rather than
 /// growing a second copy on this side.
 const OPEN_EVENT: &str = "menu:open";
 const EXPORT_EVENT: &str = "menu:export";
+const SHORTCUTS_EVENT: &str = "menu:shortcuts";
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let open = MenuItemBuilder::with_id(OPEN_ID, "Open Database…")
@@ -41,6 +43,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
     let view = SubmenuBuilder::new(app, "View").fullscreen().build()?;
 
+    // Cmd+/ rather than ?, so it does not collide with the ? the webview
+    // handles: an accelerator the menu claims never reaches the page.
+    let shortcuts = MenuItemBuilder::with_id(SHORTCUTS_ID, "Keyboard Shortcuts")
+        .accelerator("CmdOrCtrl+/")
+        .build(app)?;
+    let help = SubmenuBuilder::new(app, "Help").item(&shortcuts).build()?;
+
     let window = SubmenuBuilder::new(app, "Window")
         .minimize()
         .maximize()
@@ -65,13 +74,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             .build()?;
 
         return MenuBuilder::new(app)
-            .items(&[&app_menu, &file, &edit, &view, &window])
+            .items(&[&app_menu, &file, &edit, &view, &window, &help])
             .build();
     }
 
     #[cfg(not(target_os = "macos"))]
     MenuBuilder::new(app)
-        .items(&[&file, &edit, &view, &window])
+        .items(&[&file, &edit, &view, &window, &help])
         .build()
 }
 
@@ -79,6 +88,7 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, id: &str) {
     let event = match id {
         OPEN_ID => OPEN_EVENT,
         EXPORT_ID => EXPORT_EVENT,
+        SHORTCUTS_ID => SHORTCUTS_EVENT,
         _ => return,
     };
     if let Err(e) = app.emit(event, ()) {

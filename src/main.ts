@@ -18,6 +18,7 @@ const state: AppState = {
   queryResult: null,
   queryError: null,
   detailsOpen: false,
+  helpOpen: false,
   cursorRow: 0,
   cursorCol: 0,
 };
@@ -404,6 +405,92 @@ function renderDbDetails(info: DbInfo): string {
   `;
 }
 
+/// Every binding the app answers to, in one place so the panel cannot drift
+/// from what setupKeyboardShortcuts actually does.
+const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
+  {
+    title: "Move",
+    keys: [
+      ["j  ↓", "Down a row"],
+      ["k  ↑", "Up a row"],
+      ["h  ←", "Left a column"],
+      ["l  →", "Right a column"],
+      ["⌃D  ⌃U", "Half a screen"],
+      ["g  G", "First / last row"],
+      ["Home  End", "First / last column"],
+    ],
+  },
+  {
+    title: "Pages",
+    keys: [
+      ["]  ⇟", "Next 50 rows"],
+      ["[  ⇞", "Previous 50 rows"],
+      ["scroll", "Reaching an edge turns the page"],
+    ],
+  },
+  {
+    title: "Grid",
+    keys: [
+      ["s", "Sort by the cursor's column"],
+      ["H  L", "Pan sideways a column"],
+      ["⇧←  ⇧→", "Pan sideways a column"],
+      ["click", "Put the cursor on a cell"],
+    ],
+  },
+  {
+    title: "App",
+    keys: [
+      ["/  :", "Jump to the SQL box"],
+      ["⌘⏎", "Run the query"],
+      ["i", "Database details"],
+      ["⌘T", "Next theme"],
+      ["⌘B", "Show or hide the sidebar"],
+      ["⌘O", "Open a database"],
+      ["⌘E", "Export CSV"],
+      ["?", "This panel"],
+    ],
+  },
+];
+
+function renderHelpOverlay(): string {
+  const sections = SHORTCUTS.map(section => `
+    <section class="help-section">
+      <h3>${section.title}</h3>
+      <dl>
+        ${section.keys.map(([key, description]) => `
+          <dt><kbd>${escapeHtml(key)}</kbd></dt>
+          <dd>${description}</dd>
+        `).join("")}
+      </dl>
+    </section>
+  `).join("");
+
+  return `
+    <div id="help-overlay" class="help-overlay">
+      <div class="help-panel" role="dialog" aria-label="Keyboard shortcuts">
+        <div class="help-header">
+          <span class="help-title">Keyboard shortcuts</span>
+          <span class="help-dismiss">esc to close</span>
+        </div>
+        <div class="help-body">${sections}</div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleHelp(): void {
+  state.helpOpen = !state.helpOpen;
+  render();
+}
+
+function bindHelpOverlay(): void {
+  const overlay = document.getElementById("help-overlay");
+  // Clicking the backdrop dismisses; clicking the panel itself must not.
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) toggleHelp();
+  });
+}
+
 function render(): void {
   const app = document.getElementById("app")!;
   const carriedScroll = tableWrapper()?.scrollTop ?? 0;
@@ -415,8 +502,10 @@ function render(): void {
         <p>Open a database file to get started</p>
         <button id="open-btn" class="btn">Open Database</button>
       </div>
+      ${state.helpOpen ? renderHelpOverlay() : ""}
     `;
     document.getElementById("open-btn")?.addEventListener("click", handleOpenFile);
+    bindHelpOverlay();
     return;
   }
 
@@ -466,9 +555,11 @@ function render(): void {
         </div>
       </div>
     </div>
+    ${state.helpOpen ? renderHelpOverlay() : ""}
   `;
 
   // Bind events
+  bindHelpOverlay();
   document.getElementById("theme-btn")?.addEventListener("click", () => { cycleTheme(); });
   document.getElementById("db-details-toggle")?.addEventListener("click", () => {
     state.detailsOpen = !state.detailsOpen;
@@ -647,7 +738,21 @@ function setupKeyboardShortcuts(): void {
     }
     // Everything below drives the grid, so it only applies when the query box
     // is not the one being typed into.
-    if (e.isComposing || isTypingTarget(document.activeElement) || !state.dbInfo) return;
+    if (e.isComposing || isTypingTarget(document.activeElement)) return;
+
+    // The overlay swallows every key, the way the TUI's does: the key that
+    // opened it closes it again, and nothing reaches the grid meanwhile.
+    if (state.helpOpen) {
+      e.preventDefault();
+      if (e.key === "Escape" || e.key === "Enter" || e.key === "?") toggleHelp();
+      return;
+    }
+    if (e.key === "?") {
+      e.preventDefault();
+      toggleHelp();
+      return;
+    }
+    if (!state.dbInfo) return;
 
     // Half-viewport jumps. Ctrl rather than Cmd, matching the TUI — and they
     // are free outside a text field, where macOS would read them as
@@ -746,6 +851,7 @@ function isTypingTarget(el: Element | null): boolean {
 function setupMenuListeners(): void {
   void listen("menu:open", () => { void handleOpenFile(); });
   void listen("menu:export", () => { void exportCsv(); });
+  void listen("menu:shortcuts", () => { toggleHelp(); });
 }
 
 function init(): void {
