@@ -35,7 +35,6 @@ async function openDatabase(path: string): Promise<void> {
     state.dbInfo = await invoke<DbInfo>("open_database", { path });
     state.tables = await invoke<TableInfo[]>("list_tables");
     state.views = await invoke<string[]>("list_views");
-    state.indexes = [];
     state.selectedTable = null;
     state.data = null;
     state.schema = [];
