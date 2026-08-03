@@ -56,4 +56,8 @@ export interface AppState {
   queryResult: QueryResult | null;
   queryError: string | null;
   detailsOpen: boolean;
+  /// Row the cursor is on, numbered across the whole table rather than the
+  /// current page, so crossing a page edge is ordinary arithmetic.
+  cursorRow: number;
+  cursorCol: number;
 }

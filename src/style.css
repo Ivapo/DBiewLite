@@ -413,6 +413,17 @@ body {
   background: var(--bg-hover);
 }
 
+.data-table tbody tr.row-cursor {
+  background: var(--bg-hover);
+}
+
+/* Outlined rather than filled: the cell keeps its own value colouring, which
+   is what tells you a NULL from a number at a glance. */
+.data-table td.cell-cursor {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
 .cell-null {
   color: var(--text-secondary);
   font-style: italic;
@@ -566,6 +577,15 @@ body {
 
 [data-theme="3.1"] .sidebar-count {
   background: var(--border-color);
+}
+
+/* The palette's hover blue is the accent yellow, which would swamp the row. */
+[data-theme="3.1"] .data-table tbody tr.row-cursor {
+  background: #003d7a;
+}
+
+[data-theme="3.1"] .data-table td.cell-cursor {
+  outline-width: 2px;
 }
 
 /* ============================================

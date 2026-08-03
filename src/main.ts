@@ -17,6 +17,8 @@ const state: AppState = {
   queryResult: null,
   queryError: null,
   detailsOpen: false,
+  cursorRow: 0,
+  cursorCol: 0,
 };
 
 function escapeHtml(s: string): string {
@@ -55,6 +57,8 @@ async function selectTable(name: string): Promise<void> {
   state.selectedTable = name;
   state.page = 0;
   state.sort = null;
+  state.cursorRow = 0;
+  state.cursorCol = 0;
   state.schema = await invoke<ColumnInfo[]>("get_schema", { table: name });
   await loadTableData();
   pendingScroll = "top";
@@ -79,6 +83,8 @@ async function toggleSort(column: string): Promise<void> {
     state.sort = { column, ascending: true };
   }
   state.page = 0;
+  // Row order changed underneath it, so the old row number means nothing now.
+  state.cursorRow = 0;
   await loadTableData();
   pendingScroll = "top";
   render();
@@ -152,12 +158,22 @@ async function turnPage(direction: 1 | -1): Promise<void> {
   // render is what applies it.
   pendingScroll = direction === 1 ? "top" : "bottom";
   const moved = direction === 1 ? await nextPage() : await prevPage();
-  if (!moved) pendingScroll = null;
+  if (moved) {
+    // The cursor is numbered across the whole table, so a page turn it did not
+    // drive would strand it off-screen. Bring it to the edge being read into.
+    state.cursorRow = direction === 1
+      ? state.page * state.pageSize
+      : state.page * state.pageSize + state.pageSize - 1;
+    paintCursor();
+  } else {
+    pendingScroll = null;
+  }
   pageTurning = false;
 }
 
 function onTableScroll(wrapper: HTMLElement): void {
   if (pageTurning) return;
+  if (performance.now() - scrolledProgrammaticallyAt < SCROLL_SETTLE_MS) return;
   // A page too short to scroll has no edges to arrive at; without this the
   // grid would turn straight through every remaining page.
   if (wrapper.scrollHeight <= wrapper.clientHeight) return;
@@ -172,27 +188,141 @@ function onTableScroll(wrapper: HTMLElement): void {
   else if (edge === "top") void turnPage(-1);
 }
 
-/// Scrolls the grid by whole rows, rolling over the page edge like the TUI's
-/// cursor does.
-function scrollByRows(rows: number): void {
+// --- cell cursor -------------------------------------------------------
+
+/// Scrolling the cursor into view can land against an edge, which would
+/// otherwise read as the user arriving there and turn a page on its own. Only
+/// scrolling the user drives should turn pages.
+///
+/// Recorded as a time rather than a flag cleared on the next frame: a window
+/// that is hidden or occluded runs no frames, and a flag left standing there
+/// would disable page turning for the rest of the session.
+const SCROLL_SETTLE_MS = 150;
+let scrolledProgrammaticallyAt = -Infinity;
+
+function scrollProgrammatically(wrapper: HTMLElement, top: number, left: number): void {
+  scrolledProgrammaticallyAt = performance.now();
+  wrapper.scrollTop = top;
+  wrapper.scrollLeft = left;
+}
+
+/// Rows that fit below the sticky header — the step Ctrl+D/Ctrl+U move by.
+function visibleRowCount(): number {
+  const wrapper = tableWrapper();
+  const row = wrapper?.querySelector("tbody tr") as HTMLElement | null;
+  if (!wrapper || !row) return 1;
+  const headHeight = (wrapper.querySelector("thead") as HTMLElement | null)?.offsetHeight ?? 0;
+  return Math.max(1, Math.floor((wrapper.clientHeight - headHeight) / (row.offsetHeight || FALLBACK_ROW_PX)));
+}
+
+function scrollCursorIntoView(wrapper: HTMLElement, row: HTMLElement, cell: HTMLElement | null): void {
+  const wrapRect = wrapper.getBoundingClientRect();
+  // The header floats over the top of the scroll area, so a row is only
+  // really visible once it clears it.
+  const headHeight = (wrapper.querySelector("thead") as HTMLElement | null)?.offsetHeight ?? 0;
+  const rowRect = row.getBoundingClientRect();
+
+  let dy = 0;
+  if (rowRect.top < wrapRect.top + headHeight) dy = rowRect.top - (wrapRect.top + headHeight);
+  else if (rowRect.bottom > wrapRect.bottom) dy = rowRect.bottom - wrapRect.bottom;
+
+  let dx = 0;
+  if (cell) {
+    const cellRect = cell.getBoundingClientRect();
+    if (cellRect.left < wrapRect.left) dx = cellRect.left - wrapRect.left;
+    else if (cellRect.right > wrapRect.right) dx = cellRect.right - wrapRect.right;
+  }
+
+  // Clamp before comparing: the first row sits under the sticky header, so it
+  // asks to scroll above zero every time. Stamping the suppression window for
+  // a scroll that cannot move would deafen the grid to real ones.
+  const top = clamp(wrapper.scrollTop + dy, 0, Math.max(0, wrapper.scrollHeight - wrapper.clientHeight));
+  const left = clamp(wrapper.scrollLeft + dx, 0, Math.max(0, wrapper.scrollWidth - wrapper.clientWidth));
+  if (top === wrapper.scrollTop && left === wrapper.scrollLeft) return;
+  scrollProgrammatically(wrapper, top, left);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+/// Moves the cursor highlight without rebuilding the grid — a full render per
+/// keystroke would rebind every listener and fight the scroll position.
+function paintCursor(): void {
   const wrapper = tableWrapper();
   if (!wrapper) return;
-  const firstRow = wrapper.querySelector("tbody tr") as HTMLElement | null;
-  const rowHeight = firstRow?.offsetHeight || FALLBACK_ROW_PX;
-  const before = wrapper.scrollTop;
-  wrapper.scrollTop += rows * rowHeight;
-  // Already pinned against the edge, so no scroll event will fire to notice it.
-  if (wrapper.scrollTop === before) onTableScroll(wrapper);
+  wrapper.querySelector(".row-cursor")?.classList.remove("row-cursor");
+  wrapper.querySelector(".cell-cursor")?.classList.remove("cell-cursor");
+
+  const pageRow = state.cursorRow - state.page * state.pageSize;
+  const row = wrapper.querySelectorAll("tbody tr")[pageRow] as HTMLElement | undefined;
+  if (!row) return;
+  row.classList.add("row-cursor");
+  const cell = row.children[state.cursorCol] as HTMLElement | undefined;
+  cell?.classList.add("cell-cursor");
+  scrollCursorIntoView(wrapper, row, cell ?? null);
+}
+
+async function setCursorRow(target: number): Promise<void> {
+  state.cursorRow = target;
+  const page = Math.floor(target / state.pageSize);
+  if (page === state.page) {
+    paintCursor();
+    return;
+  }
+  state.page = page;
+  await loadTableData();
+  render();
+}
+
+async function moveCursorRow(delta: number): Promise<void> {
+  const total = state.data?.total_rows ?? 0;
+  if (total === 0) return;
+  const target = Math.min(Math.max(state.cursorRow + delta, 0), total - 1);
+  if (target !== state.cursorRow) await setCursorRow(target);
+}
+
+function moveCursorCol(delta: number): void {
+  const columns = state.data?.columns.length ?? 0;
+  if (columns === 0) return;
+  state.cursorCol = Math.min(Math.max(state.cursorCol + delta, 0), columns - 1);
+  paintCursor();
+}
+
+/// Pans the grid sideways a whole column at a time, the way Shift+arrows do in
+/// the TUI, rather than by some arbitrary pixel step.
+function panColumns(direction: -1 | 1): void {
+  const wrapper = tableWrapper();
+  if (!wrapper) return;
+  const headers = Array.from(wrapper.querySelectorAll("thead th")) as HTMLElement[];
+  if (headers.length === 0) return;
+
+  const wrapLeft = wrapper.getBoundingClientRect().left;
+  const edges = headers.map(th => th.getBoundingClientRect().left - wrapLeft + wrapper.scrollLeft);
+  const current = wrapper.scrollLeft;
+  const next = direction === 1
+    ? edges.find(edge => edge > current + 1)
+    : [...edges].reverse().find(edge => edge < current - 1);
+
+  const fallback = direction === 1 ? wrapper.scrollWidth - wrapper.clientWidth : 0;
+  scrollProgrammatically(wrapper, wrapper.scrollTop, next ?? fallback);
+}
+
+function sortCursorColumn(): void {
+  const column = state.data?.columns[state.cursorCol];
+  if (column) void toggleSort(column);
 }
 
 /// Jumps to the first or last row of the whole table.
 async function goToEdgeRow(which: "first" | "last"): Promise<void> {
-  if (!state.data?.total_rows) return;
-  const maxPage = Math.floor((state.data.total_rows - 1) / state.pageSize);
-  const target = which === "first" ? 0 : maxPage;
+  const total = state.data?.total_rows ?? 0;
+  if (total === 0) return;
+  const targetRow = which === "first" ? 0 : total - 1;
+  const targetPage = Math.floor(targetRow / state.pageSize);
+  state.cursorRow = targetRow;
   pendingScroll = which === "first" ? "top" : "bottom";
-  if (state.page !== target) {
-    state.page = target;
+  if (state.page !== targetPage) {
+    state.page = targetPage;
     await loadTableData();
   }
   render();
@@ -358,8 +488,18 @@ function render(): void {
   const wrapper = tableWrapper();
   if (wrapper) {
     wrapper.addEventListener("scroll", () => { onTableScroll(wrapper); });
+    wrapper.querySelectorAll("td[data-cell]").forEach(el => {
+      el.addEventListener("click", () => {
+        const row = Number(el.getAttribute("data-row"));
+        const col = Number(el.getAttribute("data-cell"));
+        state.cursorRow = state.page * state.pageSize + row;
+        state.cursorCol = col;
+        paintCursor();
+      });
+    });
   }
   applyPendingScroll(carriedScroll);
+  paintCursor();
 
   const queryInput = document.getElementById("query-input") as HTMLTextAreaElement | null;
   if (queryInput) {
@@ -394,11 +534,14 @@ function renderDataTable(): string {
     return `<th class="col-header" data-col="${col}">${col}${indicator}</th>`;
   }).join("");
 
-  const rows = state.data.rows.map(row => {
-    const cells = row.map(val =>
-      `<td class="${cellClass(val)}">${formatCellValue(val)}</td>`
-    ).join("");
-    return `<tr>${cells}</tr>`;
+  const cursorPageRow = state.cursorRow - state.page * state.pageSize;
+  const rows = state.data.rows.map((row, rowIndex) => {
+    const onCursorRow = rowIndex === cursorPageRow;
+    const cells = row.map((val, colIndex) => {
+      const cursor = onCursorRow && colIndex === state.cursorCol ? " cell-cursor" : "";
+      return `<td class="${cellClass(val)}${cursor}" data-row="${rowIndex}" data-cell="${colIndex}">${formatCellValue(val)}</td>`;
+    }).join("");
+    return `<tr class="${onCursorRow ? "row-cursor" : ""}">${cells}</tr>`;
   }).join("");
 
   const schemaInfo = state.schema.map(c => {
@@ -502,22 +645,67 @@ function setupKeyboardShortcuts(): void {
       exportCsv();
     }
 
-    // Everything below is unmodified keys acting on the grid, so they only
-    // apply when the query box does not have the keystroke.
-    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-    if (isTypingTarget(document.activeElement)) return;
-    if (!state.dbInfo) return;
+    // Everything below drives the grid, so it only applies when the query box
+    // is not the one being typed into.
+    if (e.isComposing || isTypingTarget(document.activeElement) || !state.dbInfo) return;
+
+    // Half-viewport jumps. Ctrl rather than Cmd, matching the TUI — and they
+    // are free outside a text field, where macOS would read them as
+    // forward-delete and delete-to-line-start.
+    if (e.ctrlKey && !e.metaKey && (e.key === "d" || e.key === "u")) {
+      e.preventDefault();
+      const step = Math.max(1, Math.floor(visibleRowCount() / 2));
+      void moveCursorRow(e.key === "d" ? step : -step);
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     switch (e.key) {
       case "ArrowDown":
       case "j":
         e.preventDefault();
-        scrollByRows(1);
+        void moveCursorRow(1);
         break;
       case "ArrowUp":
       case "k":
         e.preventDefault();
-        scrollByRows(-1);
+        void moveCursorRow(-1);
+        break;
+      // Shift pans the grid sideways; unshifted moves the cursor and lets the
+      // grid follow. H/L are the same keys under a different name.
+      case "H":
+        e.preventDefault();
+        panColumns(-1);
+        break;
+      case "L":
+        e.preventDefault();
+        panColumns(1);
+        break;
+      case "ArrowLeft":
+      case "h":
+        e.preventDefault();
+        if (e.shiftKey) panColumns(-1);
+        else moveCursorCol(-1);
+        break;
+      case "ArrowRight":
+      case "l":
+        e.preventDefault();
+        if (e.shiftKey) panColumns(1);
+        else moveCursorCol(1);
+        break;
+      case "Home":
+        e.preventDefault();
+        state.cursorCol = 0;
+        paintCursor();
+        break;
+      case "End":
+        e.preventDefault();
+        state.cursorCol = Math.max(0, (state.data?.columns.length ?? 1) - 1);
+        paintCursor();
+        break;
+      case "s":
+        e.preventDefault();
+        sortCursorColumn();
         break;
       case "PageDown":
       case "]":
