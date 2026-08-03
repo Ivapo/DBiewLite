@@ -1,4 +1,5 @@
 mod commands;
+mod menu;
 
 use commands::DbState;
 use std::sync::Mutex;
@@ -16,6 +17,10 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            app.set_menu(menu::build(app.handle())?)?;
+            app.on_menu_event(|app, event| {
+                menu::handle_event(app, event.id().as_ref());
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

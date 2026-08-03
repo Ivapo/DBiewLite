@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import type { AppState, DbInfo, TableInfo, ColumnInfo, QueryResult } from "./types";
 import { initTheme, cycleTheme } from "./theme";
 
@@ -343,8 +344,15 @@ async function runQuery(): Promise<void> {
 
 async function exportCsv(): Promise<void> {
   if (!state.selectedTable) return;
+  // Ask where it goes. A relative path would resolve against the working
+  // directory, which is src-tauri under `tauri dev` and / for a bundled app —
+  // where the write fails outright.
+  const outputPath = await save({
+    defaultPath: `${state.selectedTable}.csv`,
+    filters: [{ name: "CSV", extensions: ["csv"] }],
+  });
+  if (!outputPath) return;
   try {
-    const outputPath = `${state.selectedTable}.csv`;
     await invoke("export_csv", { table: state.selectedTable, outputPath });
     showStatus(`Exported to ${outputPath}`);
   } catch (e) {
@@ -621,11 +629,9 @@ async function handleOpenFile(): Promise<void> {
 
 function setupKeyboardShortcuts(): void {
   document.addEventListener("keydown", (e) => {
-    // Cmd+O: open file
-    if ((e.metaKey || e.ctrlKey) && e.key === "o") {
-      e.preventDefault();
-      handleOpenFile();
-    }
+    // Cmd+O and Cmd+E are accelerators on the File menu now. The menu consumes
+    // them before the webview sees them, so handling them here as well would
+    // either do nothing or fire twice.
     // Cmd+T: cycle theme
     if ((e.metaKey || e.ctrlKey) && e.key === "t") {
       e.preventDefault();
@@ -639,12 +645,6 @@ function setupKeyboardShortcuts(): void {
         sidebar.classList.toggle("collapsed");
       }
     }
-    // Cmd+E: export
-    if ((e.metaKey || e.ctrlKey) && e.key === "e") {
-      e.preventDefault();
-      exportCsv();
-    }
-
     // Everything below drives the grid, so it only applies when the query box
     // is not the one being typed into.
     if (e.isComposing || isTypingTarget(document.activeElement) || !state.dbInfo) return;
@@ -743,9 +743,15 @@ function isTypingTarget(el: Element | null): boolean {
   return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
 }
 
+function setupMenuListeners(): void {
+  void listen("menu:open", () => { void handleOpenFile(); });
+  void listen("menu:export", () => { void exportCsv(); });
+}
+
 function init(): void {
   initTheme();
   setupKeyboardShortcuts();
+  setupMenuListeners();
   render();
 }
 
