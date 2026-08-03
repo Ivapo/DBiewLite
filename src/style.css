@@ -3,21 +3,21 @@
    ============================================ */
 
 :root {
-  --bg-primary: #09090b;
-  --bg-secondary: #27272a;
-  --bg-hover: #45475a;
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --border-color: #3a3a42;
-  --accent: #89b4fa;
-  --danger: #e64553;
-  --radius: 4px;
-  --radius-lg: 8px;
+  --bg-primary: #0f0f17;
+  --bg-secondary: #0a0a12;
+  --bg-hover: #292e42;
+  --text-primary: #c0caf5;
+  --text-secondary: #565f89;
+  --border-color: #3b4261;
+  --accent: #7aa2f7;
+  --danger: #f7768e;
+  --radius: 0px;
+  --radius-lg: 0px;
   --spacing-sm: 4px;
   --spacing-md: 8px;
   --spacing-lg: 16px;
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-family: "MesloLGS NF", "SF Mono", "Menlo", "Consolas", monospace;
   font-size: 13px;
   color: var(--text-primary);
 }
@@ -31,6 +31,10 @@
   --border-color: #89cfef;
   --accent: #1e66f5;
   --danger: #d20f39;
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 [data-theme="3.1"] {
@@ -42,21 +46,6 @@
   --border-color: #005599;
   --accent: #ffc600;
   --danger: #ff5555;
-  --radius: 0px;
-  --radius-lg: 0px;
-
-  font-family: "MesloLGS NF", "SF Mono", "Menlo", "Consolas", monospace;
-}
-
-[data-theme="tui"] {
-  --bg-primary: #0f0f17;
-  --bg-secondary: #0a0a12;
-  --bg-hover: #292e42;
-  --text-primary: #c0caf5;
-  --text-secondary: #565f89;
-  --border-color: #3b4261;
-  --accent: #7aa2f7;
-  --danger: #f7768e;
   --radius: 0px;
   --radius-lg: 0px;
 
@@ -525,24 +514,24 @@ body {
 }
 
 /* ============================================
-   TUI Theme Overrides
+   Dark Theme Overrides
    ============================================ */
 
-[data-theme="tui"] .sidebar-item.active {
+[data-theme="dark"] .sidebar-item.active {
   background: var(--bg-hover);
   border-left-color: var(--accent);
 }
 
-[data-theme="tui"] .data-header {
+[data-theme="dark"] .data-header {
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
 }
 
-[data-theme="tui"] .btn {
+[data-theme="dark"] .btn {
   border-color: var(--border-color);
 }
 
-[data-theme="tui"] .btn:hover {
+[data-theme="dark"] .btn:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: transparent;
@@ -570,10 +559,10 @@ body {
   background: var(--accent);
 }
 
-[data-theme="tui"] ::-webkit-scrollbar {
+[data-theme="dark"] ::-webkit-scrollbar {
   width: 6px;
 }
 
-[data-theme="tui"] ::-webkit-scrollbar-track {
+[data-theme="dark"] ::-webkit-scrollbar-track {
   background: transparent;
 }
