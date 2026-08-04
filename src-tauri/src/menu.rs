@@ -73,9 +73,12 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             .quit()
             .build()?;
 
-        return MenuBuilder::new(app)
+        // Tail expression rather than an early return: the arm below is
+        // compiled away on this platform, leaving this block as the last thing
+        // in the function.
+        MenuBuilder::new(app)
             .items(&[&app_menu, &file, &edit, &view, &window, &help])
-            .build();
+            .build()
     }
 
     #[cfg(not(target_os = "macos"))]
