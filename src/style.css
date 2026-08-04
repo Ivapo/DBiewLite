@@ -449,7 +449,10 @@ body {
   outline-offset: -1px;
 }
 
-.cell-null {
+/* Stand-ins for a value rather than the value itself, so they are set apart
+   from data that happens to read the same way. */
+.cell-null,
+.cell-empty {
   color: var(--text-secondary);
   font-style: italic;
 }

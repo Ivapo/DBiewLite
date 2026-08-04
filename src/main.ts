@@ -420,9 +420,15 @@ function showStatus(msg: string): void {
   setTimeout(() => toast.classList.add("hidden"), 3000);
 }
 
+/// Plain text for a cell. The angle-bracket markers are stand-ins for values
+/// with nothing to show, and are escaped along with everything else on the way
+/// into the DOM — unescaped, `<blob 12 B>` is parsed as a start tag and the
+/// cell draws empty.
 function formatCellValue(val: unknown): string {
   if (val === null || val === undefined) return "NULL";
   if (Array.isArray(val)) return `<blob ${val.length} B>`;
+  // Otherwise indistinguishable from a NULL, or from a cell that failed to draw.
+  if (val === "") return "<empty>";
   return String(val);
 }
 
@@ -430,6 +436,7 @@ function cellClass(val: unknown): string {
   if (val === null || val === undefined) return "cell-null";
   if (typeof val === "number") return "cell-number";
   if (Array.isArray(val)) return "cell-blob";
+  if (val === "") return "cell-empty";
   return "cell-text";
 }
 
@@ -856,7 +863,7 @@ function renderDataTable(): string {
     const onCursorRow = rowIndex === cursorPageRow;
     const cells = row.map((val, colIndex) => {
       const cursor = onCursorRow && colIndex === state.cursorCol ? " cell-cursor" : "";
-      return `<td class="${cellClass(val)}${cursor}" data-row="${rowIndex}" data-cell="${colIndex}">${formatCellValue(val)}</td>`;
+      return `<td class="${cellClass(val)}${cursor}" data-row="${rowIndex}" data-cell="${colIndex}">${escapeHtml(formatCellValue(val))}</td>`;
     }).join("");
     return `<tr class="${onCursorRow ? "row-cursor" : ""}">${cells}</tr>`;
   }).join("");
@@ -901,7 +908,7 @@ function renderQueryPanel(): string {
   } else if (state.queryResult) {
     const qHeaders = state.queryResult.columns.map(c => `<th>${c}</th>`).join("");
     const qRows = state.queryResult.rows.map(row => {
-      const cells = row.map(val => `<td class="${cellClass(val)}">${formatCellValue(val)}</td>`).join("");
+      const cells = row.map(val => `<td class="${cellClass(val)}">${escapeHtml(formatCellValue(val))}</td>`).join("");
       return `<tr>${cells}</tr>`;
     }).join("");
     resultHtml = `

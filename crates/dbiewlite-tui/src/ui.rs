@@ -189,6 +189,9 @@ fn cell_display(val: &CellValue) -> (String, Color) {
         CellValue::Null => ("NULL".to_string(), TEXT_MUTED),
         CellValue::Integer(n) => (n.to_string(), Color::Cyan),
         CellValue::Real(r) => (format!("{}", r), Color::Cyan),
+        // Drawn as nothing at all otherwise, which reads as a NULL or as a
+        // column that failed to render.
+        CellValue::Text(s) if s.is_empty() => ("<empty>".to_string(), TEXT_MUTED),
         CellValue::Text(s) => {
             // Truncate by chars, not bytes — slicing mid-codepoint panics.
             let display = if s.chars().count() > MAX_COL_WIDTH {
