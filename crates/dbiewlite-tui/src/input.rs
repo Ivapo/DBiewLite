@@ -44,14 +44,16 @@ fn handle_normal(app: &mut App, key: KeyEvent) {
             app.mode = AppMode::Info;
         }
 
-        // Panel switching (Sidebar <-> Data only, skip if sidebar collapsed)
-        KeyCode::Tab | KeyCode::BackTab => {
-            if !app.sidebar_collapsed {
-                app.active_panel = match app.active_panel {
-                    Panel::Sidebar => Panel::Data,
-                    Panel::Data | Panel::Query => Panel::Sidebar,
-                };
-            }
+        // Panel switching, over whichever panels are actually on screen.
+        KeyCode::Tab | KeyCode::BackTab => app.cycle_panel(),
+
+        // Trade the split between the grid and the results. Only meaningful
+        // while there are results to make room for.
+        KeyCode::Char('+') | KeyCode::Char('=') if app.query_visible() => {
+            app.query_expanded = true;
+        }
+        KeyCode::Char('-') if app.query_visible() => {
+            app.query_expanded = false;
         }
 
         // Enter query mode
@@ -96,10 +98,7 @@ fn handle_normal(app: &mut App, key: KeyEvent) {
         _ => match app.active_panel {
             Panel::Sidebar => handle_sidebar(app, key),
             Panel::Data => handle_data(app, key),
-            Panel::Query => {
-                app.mode = AppMode::QueryInput;
-                handle_query_input(app, key);
-            }
+            Panel::Query => handle_query_results(app, key),
         },
     }
 }
@@ -164,6 +163,27 @@ fn handle_data(app: &mut App, key: KeyEvent) {
         KeyCode::Char('g') => app.select_row(0),
         KeyCode::Char('G') => app.select_last_row(),
         _ => {}
+    }
+}
+
+/// The results panel when it holds focus but is not being typed into. Reading
+/// the output is the common case after running something; `/` returns to the
+/// box to edit.
+fn handle_query_results(app: &mut App, key: KeyEvent) {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    match key.code {
+        KeyCode::Char('u') if ctrl => app.clear_query(),
+        KeyCode::Up | KeyCode::Char('k') => app.move_query_row(-1),
+        KeyCode::Down | KeyCode::Char('j') => app.move_query_row(1),
+        KeyCode::PageUp => app.move_query_row(-10),
+        KeyCode::PageDown => app.move_query_row(10),
+        KeyCode::Home | KeyCode::Char('g') => app.move_query_row(isize::MIN / 2),
+        KeyCode::End | KeyCode::Char('G') => app.move_query_row(isize::MAX / 2),
+        // Anything else is taken as wanting to edit again.
+        _ => {
+            app.mode = AppMode::QueryInput;
+            handle_query_input(app, key);
+        }
     }
 }
 

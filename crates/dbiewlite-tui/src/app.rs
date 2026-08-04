@@ -19,6 +19,11 @@ pub struct App {
     pub query_cursor: usize,
     pub query_result: Option<QueryResult>,
     pub query_error: Option<String>,
+    /// Scroll position within the results, so they can be read past the few
+    /// rows the panel shows at its resting height.
+    pub query_state: TableState,
+    /// Whether the results have been given the larger share of the split.
+    pub query_expanded: bool,
     pub mode: AppMode,
     pub should_quit: bool,
     pub sidebar_collapsed: bool,
@@ -110,6 +115,8 @@ impl App {
             query_cursor: 0,
             query_result: None,
             query_error: None,
+            query_state: TableState::default(),
+            query_expanded: false,
             mode: AppMode::Normal,
             should_quit: false,
             sidebar_collapsed: false,
@@ -447,6 +454,48 @@ impl App {
 
     // --- query -----------------------------------------------------------
 
+    /// Steps focus to the next panel that is actually on screen. The results
+    /// join the rotation only while they are showing, and the sidebar drops out
+    /// of it while collapsed — otherwise Tab lands somewhere invisible.
+    pub fn cycle_panel(&mut self) {
+        let mut panels = Vec::new();
+        if !self.sidebar_collapsed {
+            panels.push(Panel::Sidebar);
+        }
+        panels.push(Panel::Data);
+        if self.query_visible() {
+            panels.push(Panel::Query);
+        }
+        if panels.len() < 2 {
+            return;
+        }
+        let at = panels.iter().position(|p| *p == self.active_panel).unwrap_or(0);
+        self.active_panel = panels.remove((at + 1) % panels.len());
+    }
+
+    /// Whether the query panel is on screen. It shows while it is being typed
+    /// into and for as long as it holds anything.
+    pub fn query_visible(&self) -> bool {
+        self.mode == AppMode::QueryInput
+            || self.query_result.is_some()
+            || self.query_error.is_some()
+    }
+
+    /// Moves the selected result row. The results are not paged — a query
+    /// returns everything — so this is a plain clamp over the whole set.
+    pub fn move_query_row(&mut self, delta: isize) {
+        let Some(result) = &self.query_result else {
+            return;
+        };
+        let len = result.rows.len() as isize;
+        if len == 0 {
+            return;
+        }
+        let current = self.query_state.selected().unwrap_or(0) as isize;
+        let next = (current + delta).clamp(0, len - 1);
+        self.query_state.select(Some(next as usize));
+    }
+
     pub fn run_query(&mut self) {
         let sql = self.query_input.trim().to_string();
         if sql.is_empty() {
@@ -456,6 +505,9 @@ impl App {
             Ok(result) => {
                 self.query_result = Some(result);
                 self.query_error = None;
+                // A new result is read from its first row, not wherever the
+                // last one had been scrolled to.
+                self.query_state.select(Some(0));
                 self.set_status("Query executed successfully".to_string());
             }
             Err(e) => {
@@ -480,6 +532,8 @@ impl App {
     pub fn dismiss_query(&mut self) {
         self.query_result = None;
         self.query_error = None;
+        self.query_state.select(None);
+        self.query_expanded = false;
     }
 
     /// Writes the query results instead of a table. Re-runs the SQL rather

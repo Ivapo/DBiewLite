@@ -161,13 +161,13 @@ fn thumb_track(area: Rect, y: u16, height: u16) -> Rect {
 }
 
 fn draw_content(f: &mut Frame, app: &mut App, area: Rect) {
-    let has_query =
-        app.mode == AppMode::QueryInput || app.query_result.is_some() || app.query_error.is_some();
+    let has_query = app.query_visible();
 
-    let constraints = if has_query {
-        vec![Constraint::Percentage(60), Constraint::Percentage(40)]
-    } else {
-        vec![Constraint::Percentage(100)]
+    // `+` hands the results the share the grid had, `-` gives it back.
+    let constraints = match (has_query, app.query_expanded) {
+        (false, _) => vec![Constraint::Percentage(100)],
+        (true, false) => vec![Constraint::Percentage(60), Constraint::Percentage(40)],
+        (true, true) => vec![Constraint::Percentage(40), Constraint::Percentage(60)],
     };
 
     let chunks = Layout::default()
@@ -479,7 +479,7 @@ fn draw_query_panel(f: &mut Frame, app: &mut App, area: Rect) {
     let result_block = Block::default()
         .title(" Results ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(BORDER));
+        .border_style(Style::default().fg(if is_active { ACTIVE } else { BORDER }));
 
     if let Some(err) = &app.query_error {
         let msg = Paragraph::new(err.as_str())
@@ -520,8 +520,15 @@ fn draw_query_panel(f: &mut Frame, app: &mut App, area: Rect) {
         let table = Table::new(rows, constraints)
             .header(header)
             .block(result_block)
-            .column_spacing(COL_SPACING);
-        f.render_widget(table, chunks[1]);
+            .column_spacing(COL_SPACING)
+            .row_highlight_style(
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            );
+        // Stateful so the results can be scrolled rather than only glimpsed.
+        f.render_stateful_widget(table, chunks[1], &mut app.query_state);
     } else {
         f.render_widget(result_block, chunks[1]);
     }
@@ -536,11 +543,21 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     let dim = Style::default().fg(TEXT_MUTED);
     let sep = Span::styled(" \u{2502} ", dim);
 
+    // Running a query returns to Normal mode while leaving its panel up and
+    // focused, and the generic hint named none of the keys that then apply —
+    // clearing, exporting or dismissing it — which is exactly the moment they
+    // are looked for. Naming the export target here also settles what Ctrl+E
+    // writes, which otherwise depends on a focus the reader has to infer.
+    let showing_results = app.query_result.is_some() || app.query_error.is_some();
     let keys = match app.mode {
         AppMode::QueryInput => "Esc:cancel  Enter:run  Ctrl+U:clear",
         AppMode::Help => "Esc/q/?:close",
         AppMode::Info => "Esc/q/i:close",
-        AppMode::Normal => "q:quit  Tab:panel  ?:help  s:sort  Ctrl+B:tables  /:query",
+        AppMode::Normal if showing_results && app.active_panel == Panel::Query => {
+            "j/k:rows  +/-:size  /:edit  Ctrl+U:clear  Ctrl+E:export  Esc:hide"
+        }
+        AppMode::Normal if showing_results => "Esc:hide results  Ctrl+E:export table  /:query",
+        AppMode::Normal => "q:quit  Tab:panel  ?:help  s:sort  Ctrl+B:tables  Ctrl+E:export  /:query",
     };
 
     let mut left = vec![
@@ -793,6 +810,8 @@ fn draw_help_dialog(f: &mut Frame, area: Rect) {
             &[
                 ("/ or :", "open SQL query"),
                 ("Enter", "run query"),
+                ("j/k  g/G", "move through results"),
+                ("+ / -", "grow / restore results"),
                 ("Ctrl+U", "clear query and results"),
                 ("Esc", "leave query / hide results"),
             ],
