@@ -459,10 +459,24 @@ function renderDbDetails(info: DbInfo): string {
           <dd>${value}</dd>
         `).join("")}
       </dl>
-      <div class="db-details-hint">⌘O open another database</div>
+      <div class="db-details-hint">${MOD}O open another database</div>
     </div>
   `;
 }
+
+// macOS writes chords as glyphs run together; Windows and Linux spell them
+// out. Not cosmetic: Ctrl is the menu modifier off macOS, so a hardcoded
+// glyph would name a key that does not exist there.
+const IS_MAC = navigator.userAgent.includes("Mac");
+/// The modifier the menus claim — Cmd on macOS, Ctrl elsewhere.
+const MOD = IS_MAC ? "\u2318" : "Ctrl+";
+/// Control specifically, which stays Control on every platform.
+const CTRL = IS_MAC ? "\u2303" : "Ctrl+";
+const SHIFT = IS_MAC ? "\u21e7" : "Shift+";
+const ENTER = IS_MAC ? "\u23ce" : "Enter";
+const TAB = IS_MAC ? "\u21e5" : "Tab";
+const PAGE_UP = IS_MAC ? "\u21de" : "PgUp";
+const PAGE_DOWN = IS_MAC ? "\u21df" : "PgDn";
 
 /// Every binding the app answers to, in one place so the panel cannot drift
 /// from what setupKeyboardShortcuts actually does.
@@ -474,7 +488,7 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
       ["k  ↑", "Up a row"],
       ["h  ←", "Left a column"],
       ["l  →", "Right a column"],
-      ["⌃D  ⌃U", "Half a screen"],
+      [`${CTRL}D  ${CTRL}U`, "Half a screen"],
       ["g  G", "First / last row"],
       ["Home  End", "First / last column"],
     ],
@@ -482,8 +496,8 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
   {
     title: "Pages",
     keys: [
-      ["]  ⇟", "Next 50 rows"],
-      ["[  ⇞", "Previous 50 rows"],
+      [`]  ${PAGE_DOWN}`, "Next 50 rows"],
+      [`[  ${PAGE_UP}`, "Previous 50 rows"],
       ["scroll", "Reaching an edge turns the page"],
     ],
   },
@@ -492,25 +506,25 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ["s", "Sort by the cursor's column"],
       ["H  L", "Pan sideways a column"],
-      ["⇧←  ⇧→", "Pan sideways a column"],
+      [`${SHIFT}←  ${SHIFT}→`, "Pan sideways a column"],
       ["click", "Put the cursor on a cell"],
     ],
   },
   {
     title: "App",
     keys: [
-      ["⇥", "Focus the table list"],
-      ["⏎", "Leave the list for the grid"],
+      [TAB, "Focus the table list"],
+      [ENTER, "Leave the list for the grid"],
       ["/  :", "Open the SQL panel"],
-      ["⏎", "Run the query"],
-      ["⇧⏎", "New line in the query"],
+      [ENTER, "Run the query"],
+      [`${SHIFT}${ENTER}`, "New line in the query"],
       ["esc", "Close the SQL panel"],
       ["i", "Database details"],
       ["c", "Column details"],
-      ["⌘T", "Next theme"],
-      ["⌘B", "Show or hide the sidebar"],
-      ["⌘O", "Open a database"],
-      ["⌘E", "Export CSV"],
+      [`${MOD}T`, "Next theme"],
+      [`${MOD}B`, "Show or hide the sidebar"],
+      [`${MOD}O`, "Open a database"],
+      [`${MOD}E`, "Export CSV"],
       ["?", "This panel"],
     ],
   },
