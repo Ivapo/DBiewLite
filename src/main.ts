@@ -41,6 +41,7 @@ const state: AppState = {
   queryHeight: loadQueryHeight(),
   queryResult: null,
   queryError: null,
+  sidebarCollapsed: false,
   detailsOpen: false,
   schemaOpen: false,
   helpOpen: false,
@@ -665,6 +666,13 @@ function toggleQuery(): void {
   else openQuery();
 }
 
+/// Held in state rather than toggled on the element: the class was being
+/// dropped by the next render, so the sidebar came back on its own.
+function toggleSidebar(): void {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  render();
+}
+
 function toggleSchema(): void {
   state.schemaOpen = !state.schemaOpen;
   render();
@@ -731,7 +739,7 @@ function render(): void {
       ${state.detailsOpen ? renderDbDetails(info) : ""}
       <div id="status-toast" class="status-toast hidden"></div>
       <div class="main-area">
-        <div class="sidebar" role="listbox" aria-label="Tables and views">
+        <div class="sidebar ${state.sidebarCollapsed ? "collapsed" : ""}" role="listbox" aria-label="Tables and views">
           <div class="sidebar-section">
             <div class="sidebar-header">Tables</div>
             ${state.tables.map(t => `
@@ -966,19 +974,6 @@ function setupKeyboardShortcuts(): void {
     // Cmd+O and Cmd+E are accelerators on the File menu now. The menu consumes
     // them before the webview sees them, so handling them here as well would
     // either do nothing or fire twice.
-    // Cmd+T: cycle theme
-    if ((e.metaKey || e.ctrlKey) && e.key === "t") {
-      e.preventDefault();
-      cycleTheme();
-    }
-    // Cmd+B: toggle sidebar
-    if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-      e.preventDefault();
-      const sidebar = document.querySelector(".sidebar") as HTMLElement | null;
-      if (sidebar) {
-        sidebar.classList.toggle("collapsed");
-      }
-    }
     // Everything below drives the grid, so it only applies when the query box
     // is not the one being typed into.
     if (e.isComposing || isTypingTarget(document.activeElement)) return;
@@ -1148,6 +1143,11 @@ function setupMenuListeners(): void {
   const menuEvents: [string, () => void][] = [
     ["menu:open", () => { void handleOpenFile(); }],
     ["menu:export", () => { void exportCsv(); }],
+    ["menu:sidebar", toggleSidebar],
+    ["menu:theme", () => { cycleTheme(); }],
+    ["menu:details", () => { state.detailsOpen = !state.detailsOpen; render(); }],
+    ["menu:columns", toggleSchema],
+    ["menu:query", toggleQuery],
     ["menu:shortcuts", toggleHelp],
   ];
   for (const [event, handler] of menuEvents) {

@@ -59,6 +59,7 @@ export interface AppState {
   queryHeight: number | null;
   queryResult: QueryResult | null;
   queryError: string | null;
+  sidebarCollapsed: boolean;
   detailsOpen: boolean;
   /// Whether the column details show above the grid. Kept across tables, so it
   /// reads as a preference rather than something to re-open constantly.
