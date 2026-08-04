@@ -18,6 +18,7 @@ const state: AppState = {
   queryResult: null,
   queryError: null,
   detailsOpen: false,
+  schemaOpen: false,
   helpOpen: false,
   cursorRow: 0,
   cursorCol: 0,
@@ -445,6 +446,7 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
       ["/  :", "Jump to the SQL box"],
       ["⌘⏎", "Run the query"],
       ["i", "Database details"],
+      ["c", "Column details"],
       ["⌘T", "Next theme"],
       ["⌘B", "Show or hide the sidebar"],
       ["⌘O", "Open a database"],
@@ -524,6 +526,11 @@ function moveSidebarFocus(delta: number): void {
   if (name) previewSidebarSelection(name);
 }
 
+function toggleSchema(): void {
+  state.schemaOpen = !state.schemaOpen;
+  render();
+}
+
 function toggleHelp(): void {
   state.helpOpen = !state.helpOpen;
   render();
@@ -574,9 +581,9 @@ function render(): void {
   app.innerHTML = `
     <div class="layout">
       <div class="title-bar">
-        <button id="db-details-toggle" class="db-title" aria-expanded="${state.detailsOpen}" aria-controls="db-details">
+        <button id="db-details-toggle" class="disclosure db-title" aria-expanded="${state.detailsOpen}" aria-controls="db-details">
           <span class="db-title-name">${escapeHtml(fileName)}</span>
-          <span class="db-chevron ${state.detailsOpen ? "open" : ""}">\u203a</span>
+          <span class="disclosure-chevron ${state.detailsOpen ? "open" : ""}">\u203a</span>
         </button>
         <div class="title-actions">
           <button id="theme-btn" class="btn btn-sm">Theme</button>
@@ -641,6 +648,7 @@ function render(): void {
     });
   });
 
+  document.getElementById("schema-toggle")?.addEventListener("click", toggleSchema);
   document.getElementById("prev-page")?.addEventListener("click", () => { void turnPage(-1); });
   document.getElementById("next-page")?.addEventListener("click", () => { void turnPage(1); });
   document.getElementById("export-btn")?.addEventListener("click", exportCsv);
@@ -717,7 +725,11 @@ function renderDataTable(): string {
   return `
     <div class="data-panel">
       <div class="data-header">
-        <span class="data-title">${state.selectedTable}</span>
+        <button id="schema-toggle" class="disclosure data-title" aria-expanded="${state.schemaOpen}" aria-controls="schema-bar"
+                title="Column details">
+          <span>${escapeHtml(state.selectedTable)}</span>
+          <span class="disclosure-chevron ${state.schemaOpen ? "open" : ""}">\u203a</span>
+        </button>
         <span class="data-info">${start}\u2013${end} of ${total}</span>
         <div class="data-actions">
           <button id="prev-page" class="btn btn-sm" ${state.page === 0 ? "disabled" : ""}>\u25c0</button>
@@ -725,7 +737,7 @@ function renderDataTable(): string {
           <button id="export-btn" class="btn btn-sm">Export .csv</button>
         </div>
       </div>
-      <div class="schema-bar">${schemaInfo}</div>
+      ${state.schemaOpen ? `<div id="schema-bar" class="schema-bar">${schemaInfo}</div>` : ""}
       <div class="table-wrapper">
         <table class="data-table">
           <thead><tr>${headers}</tr></thead>
@@ -943,6 +955,10 @@ function setupKeyboardShortcuts(): void {
         e.preventDefault();
         state.detailsOpen = !state.detailsOpen;
         render();
+        break;
+      case "c":
+        e.preventDefault();
+        toggleSchema();
         break;
     }
   });

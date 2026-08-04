@@ -56,6 +56,9 @@ export interface AppState {
   queryResult: QueryResult | null;
   queryError: string | null;
   detailsOpen: boolean;
+  /// Whether the column details show above the grid. Kept across tables, so it
+  /// reads as a preference rather than something to re-open constantly.
+  schemaOpen: boolean;
   helpOpen: boolean;
   /// Row the cursor is on, numbered across the whole table rather than the
   /// current page, so crossing a page edge is ordinary arithmetic.

@@ -121,7 +121,9 @@ body {
   -webkit-app-region: drag;
 }
 
-.db-title {
+/* Shared by the two disclosures — the database details in the title bar and
+   the column details above the grid. One gesture, styled once. */
+.disclosure {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -129,27 +131,31 @@ body {
   border: none;
   border-radius: var(--radius);
   background: transparent;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
-  -webkit-app-region: no-drag;
 }
 
-.db-title:hover {
+.disclosure:hover {
   background: var(--bg-hover);
 }
 
-.db-chevron {
+.disclosure-chevron {
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1;
   transition: transform 0.15s ease;
 }
 
-.db-chevron.open {
+.disclosure-chevron.open {
   transform: rotate(90deg);
+}
+
+.db-title {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  -webkit-app-region: no-drag;
 }
 
 .db-details {
@@ -347,6 +353,9 @@ body {
 }
 
 .data-title {
+  /* Pulled back by its own left padding so the name still lines up with the
+     header's edge, and with the column chips underneath. */
+  margin-left: calc(var(--spacing-sm) * -1);
   font-weight: 600;
   color: var(--accent);
 }
