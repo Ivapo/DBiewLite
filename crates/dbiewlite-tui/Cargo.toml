@@ -1,6 +1,6 @@
 [package]
 name = "dbiewlite-tui"
-version = "0.3.0"
+version = "0.4.0"
 description = "Terminal UI for DBiewLite — viewer for SQLite, DuckDB, and Parquet files"
 edition = "2024"
 license = "MIT"
@@ -15,7 +15,7 @@ name = "dbiew"
 path = "src/main.rs"
 
 [dependencies]
-dbiewlite-core = { version = "0.2.1", path = "../dbiewlite-core" }
+dbiewlite-core = { version = "0.4.0", path = "../dbiewlite-core" }
 ratatui = "0.29"
 crossterm = "0.28"
 dirs = "6"

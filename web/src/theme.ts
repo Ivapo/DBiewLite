@@ -1,11 +1,15 @@
-export type ThemeName = "dark" | "light" | "3.1" | "tui";
+export type ThemeName = "dark" | "light" | "3.1";
 
 const STORAGE_KEY = "dbiewlite_theme";
-const THEME_ORDER: ThemeName[] = ["dark", "light", "3.1", "tui"];
+const THEME_ORDER: ThemeName[] = ["dark", "light", "3.1"];
 
 export function getTheme(): ThemeName {
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "dark" || stored === "light" || stored === "3.1" || stored === "tui") {
+  // "tui" was the old name for what is now "dark"
+  if (stored === "tui") {
+    return "dark";
+  }
+  if (stored === "dark" || stored === "light" || stored === "3.1") {
     return stored;
   }
   return "dark";

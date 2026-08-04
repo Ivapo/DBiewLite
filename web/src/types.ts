@@ -1,9 +1,10 @@
 export interface DbInfo {
   path: string;
   file_size: number;
-  sqlite_version: string;
-  page_count: number;
-  page_size: number;
+  engine: string;
+  engine_version: string;
+  page_count: number | null;
+  page_size: number | null;
   table_count: number;
 }
 
@@ -45,7 +46,8 @@ export interface AppState {
   dbInfo: DbInfo | null;
   tables: TableInfo[];
   views: string[];
-  indexes: IndexInfo[];
+  /// Only used by the details panel, which reports it the way the TUI does.
+  indexCount: number;
   selectedTable: string | null;
   schema: ColumnInfo[];
   data: QueryResult | null;
@@ -53,6 +55,20 @@ export interface AppState {
   pageSize: number;
   sort: Sort | null;
   queryInput: string;
+  queryOpen: boolean;
+  /// Explicit panel height once dragged. Null means the panel still sizes
+  /// itself to its contents, which is the better default for a one-row result.
+  queryHeight: number | null;
   queryResult: QueryResult | null;
   queryError: string | null;
+  sidebarCollapsed: boolean;
+  detailsOpen: boolean;
+  /// Whether the column details show above the grid. Kept across tables, so it
+  /// reads as a preference rather than something to re-open constantly.
+  schemaOpen: boolean;
+  helpOpen: boolean;
+  /// Row the cursor is on, numbered across the whole table rather than the
+  /// current page, so crossing a page edge is ordinary arithmetic.
+  cursorRow: number;
+  cursorCol: number;
 }

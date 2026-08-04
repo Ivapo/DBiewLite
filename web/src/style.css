@@ -3,21 +3,25 @@
    ============================================ */
 
 :root {
-  --bg-primary: #09090b;
-  --bg-secondary: #27272a;
-  --bg-hover: #45475a;
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --border-color: #3a3a42;
-  --accent: #89b4fa;
-  --danger: #e64553;
-  --radius: 4px;
-  --radius-lg: 8px;
+  --bg-primary: #0f0f17;
+  --bg-secondary: #0a0a12;
+  /* Two distinct jobs: --bg-hover is transient feedback under the pointer,
+     --bg-selected is where the selection actually is. Themes that collapse
+     them into one end up with the sidebar and the grid disagreeing. */
+  --bg-hover: #292e42;
+  --bg-selected: rgba(122, 162, 247, 0.18);
+  --text-primary: #c0caf5;
+  --text-secondary: #565f89;
+  --border-color: #3b4261;
+  --accent: #7aa2f7;
+  --danger: #f7768e;
+  --radius: 0px;
+  --radius-lg: 0px;
   --spacing-sm: 4px;
   --spacing-md: 8px;
   --spacing-lg: 16px;
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-family: "MesloLGS NF", "SF Mono", "Menlo", "Consolas", monospace;
   font-size: 13px;
   color: var(--text-primary);
 }
@@ -26,37 +30,30 @@
   --bg-primary: #faf6e9;
   --bg-secondary: #f0eacd;
   --bg-hover: #ccd0da;
+  --bg-selected: rgba(30, 102, 245, 0.12);
   --text-primary: #7b2d8e;
   --text-secondary: #2563eb;
   --border-color: #89cfef;
   --accent: #1e66f5;
   --danger: #d20f39;
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 [data-theme="3.1"] {
   --bg-primary: #001e3d;
   --bg-secondary: #002b5c;
-  --bg-hover: #ffc600;
+  /* Hover was the accent yellow here, which made every hover the loudest
+     thing on screen and forced per-element overrides to walk it back. */
+  --bg-hover: #003d7a;
+  --bg-selected: #ffc600;
   --text-primary: #e0e0e0;
   --text-secondary: #88aacc;
   --border-color: #005599;
   --accent: #ffc600;
   --danger: #ff5555;
-  --radius: 0px;
-  --radius-lg: 0px;
-
-  font-family: "MesloLGS NF", "SF Mono", "Menlo", "Consolas", monospace;
-}
-
-[data-theme="tui"] {
-  --bg-primary: #0f0f17;
-  --bg-secondary: #0a0a12;
-  --bg-hover: #292e42;
-  --text-primary: #c0caf5;
-  --text-secondary: #565f89;
-  --border-color: #3b4261;
-  --accent: #7aa2f7;
-  --danger: #f7768e;
   --radius: 0px;
   --radius-lg: 0px;
 
@@ -77,6 +74,9 @@ body {
   background: var(--bg-primary);
   overflow: hidden;
   height: 100vh;
+  /* Separates the app from the window's own title bar, which sits directly
+     above it with nothing between the two. */
+  border-top: 1px solid var(--border-color);
 }
 
 /* ============================================
@@ -90,13 +90,19 @@ body {
   justify-content: center;
   height: 100vh;
   gap: var(--spacing-lg);
+  /* The whole screen is the drop target, so it has to look like one. */
   border: 2px dashed transparent;
   transition: border-color 0.2s;
 }
 
 .welcome.drag-over {
   border-color: var(--accent);
-  background: rgba(137, 180, 250, 0.05);
+  background: var(--bg-selected);
+}
+
+.welcome-hint {
+  font-size: 12px;
+  opacity: 0.5;
 }
 
 .welcome h1 {
@@ -109,11 +115,6 @@ body {
   font-size: 14px;
 }
 
-.welcome-hint {
-  font-size: 12px !important;
-  opacity: 0.5;
-}
-
 /* ============================================
    Layout
    ============================================ */
@@ -124,35 +125,34 @@ body {
   height: 100vh;
 }
 
-.title-bar {
+/* Shared by the two disclosures — the database details in the title bar and
+   the column details above the grid. One gesture, styled once. */
+.disclosure {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--spacing-md);
-  height: 32px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  user-select: none;
-}
-
-.title-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.title-info {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.title-filename {
-  color: var(--text-primary);
-}
-
-.title-actions {
-  display: flex;
   gap: var(--spacing-sm);
+  padding: 2px var(--spacing-md) 2px var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.disclosure:hover {
+  background: var(--bg-hover);
+}
+
+.disclosure-chevron {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.disclosure-chevron.open {
+  transform: rotate(90deg);
 }
 
 .main-area {
@@ -202,12 +202,20 @@ body {
 }
 
 .sidebar-item.active {
-  background: rgba(137, 180, 250, 0.12);
+  background: var(--bg-selected);
   border-left-color: var(--accent);
 }
 
-[data-theme="light"] .sidebar-item.active {
-  background: rgba(30, 102, 245, 0.1);
+/* focus-visible, not focus: clicking an item should not leave a ring behind
+   the way keyboard navigation should. */
+.sidebar-item:focus {
+  outline: none;
+}
+
+.sidebar-item:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--bg-hover);
 }
 
 .sidebar-icon {
@@ -248,7 +256,8 @@ body {
 
 .status-toast {
   position: fixed;
-  bottom: var(--spacing-lg);
+  /* Clear of the status bar, which now occupies the bottom of the window. */
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-secondary);
@@ -304,6 +313,9 @@ body {
 }
 
 .data-title {
+  /* Pulled back by its own left padding so the name still lines up with the
+     header's edge, and with the column chips underneath. */
+  margin-left: calc(var(--spacing-sm) * -1);
   font-weight: 600;
   color: var(--accent);
 }
@@ -386,7 +398,21 @@ body {
   background: var(--bg-hover);
 }
 
-.cell-null {
+.data-table tbody tr.row-cursor {
+  background: var(--bg-selected);
+}
+
+/* Outlined rather than filled: the cell keeps its own value colouring, which
+   is what tells you a NULL from a number at a glance. */
+.data-table td.cell-cursor {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Stand-ins for a value rather than the value itself, so they are set apart
+   from data that happens to read the same way. */
+.cell-null,
+.cell-empty {
   color: var(--text-secondary);
   font-style: italic;
 }
@@ -409,11 +435,33 @@ body {
    ============================================ */
 
 .query-panel {
+  position: relative;
   border-top: 1px solid var(--border-color);
   background: var(--bg-primary);
   max-height: 40%;
   display: flex;
   flex-direction: column;
+  /* Without this the results cannot scroll inside a pinned height. */
+  min-height: 0;
+}
+
+/* Floated over the top edge rather than sitting in the flex flow: as a layout
+   row it added its own height above the input, leaving the box with more space
+   over it than under. */
+.query-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  z-index: 1;
+  cursor: row-resize;
+}
+
+.query-resize:hover,
+.query-resize:focus-visible {
+  background: var(--accent);
+  outline: none;
 }
 
 .query-input-area {
@@ -444,9 +492,14 @@ body {
 .query-results {
   flex: 1;
   overflow: auto;
+  min-height: 0;
 }
 
 .query-result-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: 12px;
   color: var(--text-secondary);
@@ -475,6 +528,17 @@ body {
   transition: all 0.1s;
 }
 
+/* A toggle that is currently on, like Query while its panel is open. */
+.btn.active {
+  background: var(--bg-selected);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+[data-theme="3.1"] .btn.active {
+  color: var(--bg-primary);
+}
+
 .btn:hover {
   background: var(--bg-hover);
   border-color: var(--accent);
@@ -491,33 +555,15 @@ body {
   font-size: 11px;
 }
 
-/* ============================================
-   3.1 Theme Overrides
-   ============================================ */
-
-[data-theme="3.1"] .title-bar {
-  background: #0055aa;
-  border-bottom-color: var(--accent);
-}
-
-[data-theme="3.1"] .title-text {
-  color: #ffffff;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-[data-theme="3.1"] .sidebar-item.active {
-  background: var(--accent);
-  color: var(--bg-primary);
-}
-
+/* Alone among the themes, this one selects with an opaque bright fill, so
+   everything sitting on it has to invert — including the grid's per-type cell
+   colours, which are unreadable on yellow. The fill itself comes from
+   --bg-selected like every other theme. */
+[data-theme="3.1"] .sidebar-item.active,
 [data-theme="3.1"] .sidebar-item.active .sidebar-name,
-[data-theme="3.1"] .sidebar-item.active .sidebar-count {
+[data-theme="3.1"] .sidebar-item.active .sidebar-count,
+[data-theme="3.1"] .data-table tbody tr.row-cursor td {
   color: var(--bg-primary);
-}
-
-[data-theme="3.1"] .sidebar-item:hover {
-  background: #003d7a;
 }
 
 [data-theme="3.1"] .data-table th:hover {
@@ -534,28 +580,121 @@ body {
   background: var(--border-color);
 }
 
-/* ============================================
-   TUI Theme Overrides
-   ============================================ */
-
-[data-theme="tui"] .sidebar-item.active {
-  background: var(--bg-hover);
-  border-left-color: var(--accent);
+/* A yellow outline is invisible on the yellow selected row. */
+[data-theme="3.1"] .data-table td.cell-cursor {
+  outline-width: 2px;
+  outline-color: var(--bg-primary);
 }
 
-[data-theme="tui"] .data-header {
+/* ============================================
+   Dark Theme Overrides
+   ============================================ */
+
+[data-theme="dark"] .data-header {
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
 }
 
-[data-theme="tui"] .btn {
+[data-theme="dark"] .btn {
   border-color: var(--border-color);
 }
 
-[data-theme="tui"] .btn:hover {
+[data-theme="dark"] .btn:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: transparent;
+}
+
+/* ============================================
+   Keyboard Shortcuts Overlay
+   ============================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.overlay-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.overlay-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.overlay-title {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Flowed into columns rather than laid out on a grid: the sections are very
+   different heights, and grid rows align, so the short ones left a hole beside
+   the long one. Columns balance instead, and drop to one when narrow. */
+.overlay-body {
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.overlay-body-columns {
+  columns: 260px 2;
+  column-gap: var(--spacing-lg);
+}
+
+.overlay-section {
+  /* A section split down the middle of a column reads as two sections. */
+  break-inside: avoid;
+  margin-bottom: var(--spacing-lg);
+}
+
+.overlay-section h3 {
+  margin-bottom: var(--spacing-sm);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.overlay-section dl {
+  display: grid;
+  /* Fixed key column so the descriptions line up down the whole panel. */
+  grid-template-columns: 92px 1fr;
+  gap: var(--spacing-sm) var(--spacing-md);
+  align-items: baseline;
+}
+
+.overlay-section dd {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.overlay-section kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* ============================================
@@ -580,10 +719,92 @@ body {
   background: var(--accent);
 }
 
-[data-theme="tui"] ::-webkit-scrollbar {
+[data-theme="dark"] ::-webkit-scrollbar {
   width: 6px;
 }
 
-[data-theme="tui"] ::-webkit-scrollbar-track {
+[data-theme="dark"] ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* ============================================
+   Status Bar
+   ============================================ */
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  height: 26px;
+  padding: 0 var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: 11px;
+  user-select: none;
+}
+
+.status-file {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  padding: 2px var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-file:hover {
+  background: var(--bg-hover);
+}
+
+.status-file-name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-sep,
+.status-counts {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.status-brand {
+  font-weight: 600;
+  color: var(--accent);
+  padding-right: var(--spacing-sm);
 }

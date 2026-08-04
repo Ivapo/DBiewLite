@@ -23,8 +23,8 @@ dbiew --version
 - Scrollbars on both panels
 - Schema inspector (column types, PKs, nullability)
 - Details panel (`i`) — size, engine, tables, views, indexes, row totals
-- SQL query input with results
-- Export tables to CSV
+- SQL query input with readable, resizable results
+- Export a table in the order you are viewing it, or export a query's results
 - Vim-style navigation (`j`/`k`, `h`/`l`)
 - Mouse and trackpad support
 
@@ -49,9 +49,12 @@ Press `?` inside the app for the full list.
 | First/last row | `g`/`G` |
 | Enter query mode | `/` or `:` |
 | Run query | `Enter` |
-| Exit query mode | `Esc` or `Tab` |
+| Move through results | `j`/`k`, `g`/`G`, `PgUp`/`PgDn` |
+| Grow/restore results | `+`/`-` |
+| Clear query and results | `Ctrl+U` |
+| Hide results / leave query | `Esc` |
 | Toggle tables panel | `Ctrl+B` |
-| Export CSV | `Ctrl+E` |
+| Export table, or query results | `Ctrl+E` |
 
 ## Mouse
 

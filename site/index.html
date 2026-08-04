@@ -251,7 +251,7 @@
 
   <!-- Hero -->
   <header class="hero">
-    <h1><span>DBiewLite</span> <span class="version">v0.2.0</span></h1>
+    <h1><span>DBiewLite</span> <span class="version">v0.4.0</span></h1>
     <p class="tagline">A friendly, read-only database viewer for SQLite, DuckDB, and Parquet files.</p>
 
     <div class="btn-row">
@@ -261,15 +261,15 @@
           macOS &#9662;
         </span>
         <div class="dropdown-menu"><div class="dropdown-menu-inner">
-          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_aarch64.dmg">Apple Silicon</a>
-          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_x64.dmg">Intel</a>
+          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_aarch64.dmg">Apple Silicon</a>
+          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_x64.dmg">Intel</a>
         </div></div>
       </div>
-      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_x64-setup.exe" class="btn btn-primary">
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_x64-setup.exe" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Windows
       </a>
-      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.2.0_amd64.AppImage" class="btn btn-primary">
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_amd64.AppImage" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Linux
       </a>
@@ -322,32 +322,32 @@
       <div class="feature-card">
         <div class="icon">&#x25A3;</div>
         <h3>Paginated Data Grid</h3>
-        <p>Scroll through large tables with fast pagination. 50 rows per page, instant navigation.</p>
+        <p>Scroll through large tables 50 rows at a time — reaching an edge turns the page for you.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x21C5;</div>
         <h3>Sortable Columns</h3>
-        <p>Click any column header to sort ascending or descending. Works on all data types.</p>
+        <p>Click a header or press s on the cursor's column. Exports follow the order you chose.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x1F50D;</div>
         <h3>Schema Inspector</h3>
-        <p>See column names, types, primary keys, and nullability at the top of every table view.</p>
+        <p>Column names, types, primary keys and nullability, a keystroke away and out of the way when you don't need them.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x1F4DD;</div>
         <h3>SQL Query Panel</h3>
-        <p>Write and run arbitrary SQL queries. Results appear in a scrollable grid below.</p>
+        <p>Write and run SQL. Opens when you want it, results are scrollable and resizable, and exportable.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x1F4E5;</div>
         <h3>Export to CSV</h3>
-        <p>Export any table to a CSV file with one click. Full table export, not just the current page.</p>
+        <p>Export a whole table in the order you're viewing it, or export a query's results. Choose where it goes.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x1F3A8;</div>
-        <h3>4 Themes</h3>
-        <p>Dark, Light, Retro 3.1, and TUI. Switch instantly with the theme button or keyboard shortcut.</p>
+        <h3>3 Themes</h3>
+        <p>Dark, Light, and Retro 3.1. Switch from the status bar or with a keyboard shortcut.</p>
       </div>
       <div class="feature-card">
         <div class="icon">&#x2328;</div>
@@ -394,30 +394,32 @@
         <tbody>
           <!-- Navigation -->
           <tr class="cat-row"><td colspan="5">Navigation</td></tr>
-          <tr><td>Open database</td><td><kbd>&#8984;</kbd>+<kbd>O</kbd></td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>CLI arg</td></tr>
-          <tr><td>Toggle sidebar</td><td><kbd>&#8984;</kbd>+<kbd>B</kbd></td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td></tr>
-          <tr><td>Switch panel</td><td colspan="3">Click</td><td><kbd>Tab</kbd></td></tr>
-          <tr><td>Move up</td><td colspan="3">&mdash;</td><td><kbd>&uarr;</kbd> / <kbd>k</kbd></td></tr>
-          <tr><td>Move down</td><td colspan="3">&mdash;</td><td><kbd>&darr;</kbd> / <kbd>j</kbd></td></tr>
-          <tr><td>Select table</td><td colspan="3">Click</td><td><kbd>Enter</kbd></td></tr>
-
-          <!-- Data -->
+          <tr><td>Open database</td><td><kbd>&#8984;</kbd> + <kbd>O</kbd></td><td><kbd>Ctrl</kbd> + <kbd>O</kbd></td><td><kbd>Ctrl</kbd> + <kbd>O</kbd></td><td>CLI arg</td></tr>
+          <tr><td>Toggle sidebar</td><td><kbd>&#8984;</kbd> + <kbd>B</kbd></td><td><kbd>Ctrl</kbd> + <kbd>B</kbd></td><td><kbd>Ctrl</kbd> + <kbd>B</kbd></td><td><kbd>Ctrl</kbd> + <kbd>B</kbd></td></tr>
+          <tr><td>Focus the table list</td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td></tr>
+          <tr><td>Leave the list for the grid</td><td><kbd>Enter</kbd></td><td><kbd>Enter</kbd></td><td><kbd>Enter</kbd></td><td><kbd>Enter</kbd></td></tr>
+          <tr><td>Move up / down</td><td colspan="4"><kbd>&uarr;</kbd> <kbd>&darr;</kbd> or <kbd>k</kbd> <kbd>j</kbd></td></tr>
+          <tr><td>First / last row</td><td colspan="4"><kbd>g</kbd> <kbd>G</kbd></td></tr>
           <tr class="cat-row"><td colspan="5">Data</td></tr>
-          <tr><td>Sort column</td><td colspan="3">Click header</td><td><kbd>1</kbd>&ndash;<kbd>9</kbd></td></tr>
-          <tr><td>Previous page</td><td colspan="3">Click <kbd>&#9664;</kbd></td><td><kbd>&larr;</kbd> / <kbd>h</kbd></td></tr>
-          <tr><td>Next page</td><td colspan="3">Click <kbd>&#9654;</kbd></td><td><kbd>&rarr;</kbd> / <kbd>l</kbd></td></tr>
-
-          <!-- Query -->
+          <tr><td>Move column cursor</td><td colspan="4"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>h</kbd> <kbd>l</kbd></td></tr>
+          <tr><td>Pan sideways</td><td colspan="4"><kbd>H</kbd> <kbd>L</kbd> or <kbd>&#8679;</kbd> + arrows</td></tr>
+          <tr><td>Sort column</td><td colspan="3"><kbd>s</kbd> or click header</td><td><kbd>s</kbd></td></tr>
+          <tr><td>Half screen up / down</td><td colspan="4"><kbd>Ctrl</kbd> + <kbd>U</kbd> <kbd>Ctrl</kbd> + <kbd>D</kbd></td></tr>
+          <tr><td>Prev / next page</td><td colspan="3"><kbd>[</kbd> <kbd>]</kbd>, <kbd>PgUp</kbd> <kbd>PgDn</kbd>, or scroll to an edge</td><td><kbd>[</kbd> <kbd>]</kbd> or <kbd>PgUp</kbd> <kbd>PgDn</kbd></td></tr>
+          <tr><td>Column details</td><td colspan="3"><kbd>c</kbd></td><td>&mdash;</td></tr>
           <tr class="cat-row"><td colspan="5">Query</td></tr>
-          <tr><td>Enter query mode</td><td colspan="3">Click textarea</td><td><kbd>/</kbd> or <kbd>:</kbd></td></tr>
-          <tr><td>Run query</td><td><kbd>&#8984;</kbd>+<kbd>Enter</kbd></td><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><kbd>Enter</kbd></td></tr>
-          <tr><td>Exit query mode</td><td colspan="3">&mdash;</td><td><kbd>Esc</kbd> / <kbd>Tab</kbd></td></tr>
-
-          <!-- Other -->
+          <tr><td>Open the query panel</td><td colspan="4"><kbd>/</kbd> or <kbd>:</kbd></td></tr>
+          <tr><td>Run query</td><td colspan="4"><kbd>Enter</kbd></td></tr>
+          <tr><td>New line in a query</td><td colspan="3"><kbd>&#8679;</kbd> + <kbd>Enter</kbd></td><td>&mdash;</td></tr>
+          <tr><td>Clear query and results</td><td colspan="3">Clear button</td><td><kbd>Ctrl</kbd> + <kbd>U</kbd></td></tr>
+          <tr><td>Resize results</td><td colspan="3">drag the divider</td><td><kbd>+</kbd> <kbd>-</kbd></td></tr>
+          <tr><td>Close the query panel</td><td colspan="3"><kbd>Esc</kbd></td><td><kbd>Esc</kbd></td></tr>
           <tr class="cat-row"><td colspan="5">Other</td></tr>
-          <tr><td>Export to CSV</td><td><kbd>&#8984;</kbd>+<kbd>E</kbd></td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td></tr>
-          <tr><td>Cycle theme</td><td><kbd>&#8984;</kbd>+<kbd>T</kbd></td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>&mdash;</td></tr>
-          <tr><td>Quit</td><td colspan="3">&mdash;</td><td><kbd>q</kbd></td></tr>
+          <tr><td>Export to CSV</td><td><kbd>&#8984;</kbd> + <kbd>E</kbd></td><td><kbd>Ctrl</kbd> + <kbd>E</kbd></td><td><kbd>Ctrl</kbd> + <kbd>E</kbd></td><td><kbd>Ctrl</kbd> + <kbd>E</kbd></td></tr>
+          <tr><td>Database details</td><td colspan="4"><kbd>i</kbd></td></tr>
+          <tr><td>Keyboard shortcuts</td><td colspan="4"><kbd>?</kbd></td></tr>
+          <tr><td>Cycle theme</td><td><kbd>&#8984;</kbd> + <kbd>T</kbd></td><td><kbd>Ctrl</kbd> + <kbd>T</kbd></td><td><kbd>Ctrl</kbd> + <kbd>T</kbd></td><td>&mdash;</td></tr>
+          <tr><td>Quit</td><td><kbd>&#8984;</kbd> + <kbd>Q</kbd></td><td><kbd>Ctrl</kbd> + <kbd>Q</kbd></td><td>&mdash;</td><td><kbd>q</kbd></td></tr>
         </tbody>
       </table>
     </div>
@@ -427,7 +429,7 @@
   <footer>
     <p>
       <a href="https://github.com/Ivapo/DBiewLite">GitHub</a>
-      &nbsp;&middot;&nbsp; v0.2.0
+      &nbsp;&middot;&nbsp; v0.4.0
       &nbsp;&middot;&nbsp; &copy; 2026 DBiewLite
     </p>
   </footer>
