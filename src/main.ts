@@ -1106,10 +1106,21 @@ function isTypingTarget(el: Element | null): boolean {
   return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
 }
 
+/// Registered once for the app's lifetime, so the returned unlisten handles
+/// are not kept. The rejections are: without a catch these become unhandled
+/// whenever the page runs outside Tauri, which is every time the frontend is
+/// opened in a plain browser to work on the UI.
 function setupMenuListeners(): void {
-  void listen("menu:open", () => { void handleOpenFile(); });
-  void listen("menu:export", () => { void exportCsv(); });
-  void listen("menu:shortcuts", () => { toggleHelp(); });
+  const menuEvents: [string, () => void][] = [
+    ["menu:open", () => { void handleOpenFile(); }],
+    ["menu:export", () => { void exportCsv(); }],
+    ["menu:shortcuts", toggleHelp],
+  ];
+  for (const [event, handler] of menuEvents) {
+    listen(event, handler).catch((e: unknown) => {
+      console.error(`could not listen for ${event}:`, e);
+    });
+  }
 }
 
 function init(): void {
