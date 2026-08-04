@@ -53,6 +53,10 @@ export interface AppState {
   pageSize: number;
   sort: Sort | null;
   queryInput: string;
+  queryOpen: boolean;
+  /// Explicit panel height once dragged. Null means the panel still sizes
+  /// itself to its contents, which is the better default for a one-row result.
+  queryHeight: number | null;
   queryResult: QueryResult | null;
   queryError: string | null;
   detailsOpen: boolean;

@@ -472,11 +472,33 @@ body {
    ============================================ */
 
 .query-panel {
+  position: relative;
   border-top: 1px solid var(--border-color);
   background: var(--bg-primary);
   max-height: 40%;
   display: flex;
   flex-direction: column;
+  /* Without this the results cannot scroll inside a pinned height. */
+  min-height: 0;
+}
+
+/* Floated over the top edge rather than sitting in the flex flow: as a layout
+   row it added its own height above the input, leaving the box with more space
+   over it than under. */
+.query-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  z-index: 1;
+  cursor: row-resize;
+}
+
+.query-resize:hover,
+.query-resize:focus-visible {
+  background: var(--accent);
+  outline: none;
 }
 
 .query-input-area {
@@ -507,6 +529,7 @@ body {
 .query-results {
   flex: 1;
   overflow: auto;
+  min-height: 0;
 }
 
 .query-result-info {
@@ -536,6 +559,17 @@ body {
   font-size: 12px;
   font-family: inherit;
   transition: all 0.1s;
+}
+
+/* A toggle that is currently on, like Query while its panel is open. */
+.btn.active {
+  background: var(--bg-selected);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+[data-theme="3.1"] .btn.active {
+  color: var(--bg-primary);
 }
 
 .btn:hover {

@@ -4,6 +4,28 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type { AppState, DbInfo, TableInfo, ColumnInfo, QueryResult } from "./types";
 import { initTheme, cycleTheme } from "./theme";
 
+// --- query panel sizing ------------------------------------------------
+//
+// Declared ahead of `state`, which reads the stored height while building
+// itself: a const below that point is still in its dead zone by then, and
+// touching it throws before a single listener is bound.
+
+/// Enough to keep the input and a line of output usable.
+const QUERY_PANEL_MIN_PX = 110;
+/// Rows the grid keeps no matter how far the divider is dragged.
+const GRID_MIN_PX = 120;
+const QUERY_HEIGHT_KEY = "dbiewlite_query_height";
+
+function loadQueryHeight(): number | null {
+  const stored = Number(localStorage.getItem(QUERY_HEIGHT_KEY));
+  return Number.isFinite(stored) && stored > 0 ? stored : null;
+}
+
+function saveQueryHeight(): void {
+  if (state.queryHeight === null) localStorage.removeItem(QUERY_HEIGHT_KEY);
+  else localStorage.setItem(QUERY_HEIGHT_KEY, String(Math.round(state.queryHeight)));
+}
+
 const state: AppState = {
   dbInfo: null,
   tables: [],
@@ -15,6 +37,8 @@ const state: AppState = {
   pageSize: 50,
   sort: null,
   queryInput: "",
+  queryOpen: false,
+  queryHeight: loadQueryHeight(),
   queryResult: null,
   queryError: null,
   detailsOpen: false,
@@ -132,7 +156,10 @@ let pendingScroll: "top" | "bottom" | null = null;
 let settledEdge: "top" | "bottom" | null = null;
 
 function tableWrapper(): HTMLElement | null {
-  return document.querySelector(".table-wrapper");
+  // Scoped to the data panel: the query results render a .table-wrapper too,
+  // and with no table selected that one would otherwise be picked up here and
+  // wired for cursor movement and page turning.
+  return document.querySelector(".data-panel .table-wrapper");
 }
 
 function applyPendingScroll(carried: number): void {
@@ -443,8 +470,10 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ["⇥", "Focus the table list"],
       ["⏎", "Leave the list for the grid"],
-      ["/  :", "Jump to the SQL box"],
-      ["⌘⏎", "Run the query"],
+      ["/  :", "Open the SQL panel"],
+      ["⏎", "Run the query"],
+      ["⇧⏎", "New line in the query"],
+      ["esc", "Close the SQL panel"],
       ["i", "Database details"],
       ["c", "Column details"],
       ["⌘T", "Next theme"],
@@ -524,6 +553,86 @@ function moveSidebarFocus(delta: number): void {
 
   const name = target.getAttribute("data-table");
   if (name) previewSidebarSelection(name);
+}
+
+function bindQueryResize(): void {
+  const handle = document.getElementById("query-resize");
+  const panel = document.querySelector(".query-panel") as HTMLElement | null;
+  const content = document.querySelector(".content") as HTMLElement | null;
+  if (!handle || !panel || !content) return;
+
+  // Applied straight to the element rather than through render(): a rebuild
+  // per pointer move would drop focus and fight the grid's scroll position.
+  const resizeTo = (height: number): void => {
+    const available = content.getBoundingClientRect().height;
+    const max = Math.max(QUERY_PANEL_MIN_PX, available - GRID_MIN_PX);
+    const clamped = clamp(height, QUERY_PANEL_MIN_PX, max);
+    state.queryHeight = clamped;
+    panel.style.height = `${clamped}px`;
+    panel.style.maxHeight = "none";
+  };
+
+  handle.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+
+    const onMove = (move: PointerEvent) => {
+      resizeTo(content.getBoundingClientRect().bottom - move.clientY);
+    };
+    const onUp = (up: PointerEvent) => {
+      handle.releasePointerCapture(up.pointerId);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      saveQueryHeight();
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+  });
+
+  // Back to sizing itself to its contents.
+  handle.addEventListener("dblclick", () => {
+    state.queryHeight = null;
+    saveQueryHeight();
+    render();
+  });
+
+  handle.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    resizeTo(panel.getBoundingClientRect().height + (e.key === "ArrowUp" ? 24 : -24));
+    saveQueryHeight();
+  });
+}
+
+function openQuery(): void {
+  state.queryOpen = true;
+  render();
+  document.getElementById("query-input")?.focus();
+}
+
+/// Closing discards the results too — leaving them behind would mean the panel
+/// reopened with stale output next time.
+function closeQuery(): void {
+  state.queryOpen = false;
+  state.queryResult = null;
+  state.queryError = null;
+  render();
+}
+
+/// Empties the box and the output together: results left standing under a
+/// cleared query read as belonging to it.
+function clearQuery(): void {
+  state.queryInput = "";
+  state.queryResult = null;
+  state.queryError = null;
+  render();
+  document.getElementById("query-input")?.focus();
+}
+
+function toggleQuery(): void {
+  if (state.queryOpen) closeQuery();
+  else openQuery();
 }
 
 function toggleSchema(): void {
@@ -619,7 +728,7 @@ function render(): void {
         </div>
         <div class="content">
           ${renderDataTable()}
-          ${renderQueryPanel()}
+          ${state.queryOpen ? renderQueryPanel() : ""}
         </div>
       </div>
     </div>
@@ -680,14 +789,26 @@ function render(): void {
       state.queryInput = (e.target as HTMLTextAreaElement).value;
     });
     queryInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      // Enter runs, as it does in the TUI, where the input is a single line.
+      // Shift+Enter is the way to a second line here.
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        runQuery();
+        void runQuery();
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        queryInput.blur();
+        // Nothing has been read yet, so the panel has no reason to stay.
+        if (!state.queryResult && !state.queryError) closeQuery();
       }
     });
   }
 
+  document.getElementById("query-btn")?.addEventListener("click", toggleQuery);
   document.getElementById("run-query-btn")?.addEventListener("click", runQuery);
+  document.getElementById("clear-query-btn")?.addEventListener("click", clearQuery);
+  bindQueryResize();
 }
 
 function renderDataTable(): string {
@@ -734,6 +855,7 @@ function renderDataTable(): string {
         <div class="data-actions">
           <button id="prev-page" class="btn btn-sm" ${state.page === 0 ? "disabled" : ""}>\u25c0</button>
           <button id="next-page" class="btn btn-sm" ${end >= total ? "disabled" : ""}>\u25b6</button>
+          <button id="query-btn" class="btn btn-sm ${state.queryOpen ? "active" : ""}">Query</button>
           <button id="export-btn" class="btn btn-sm">Export .csv</button>
         </div>
       </div>
@@ -769,11 +891,21 @@ function renderQueryPanel(): string {
     `;
   }
 
+  const nothingToClear = state.queryInput === "" && !state.queryResult && !state.queryError;
+
+  // Sized by contents until the divider is dragged, then pinned.
+  const sized = state.queryHeight === null
+    ? ""
+    : ` style="height:${Math.round(state.queryHeight)}px;max-height:none"`;
+
   return `
-    <div class="query-panel">
+    <div class="query-panel"${sized}>
+      <div id="query-resize" class="query-resize" role="separator" aria-orientation="horizontal"
+           tabindex="0" aria-label="Resize the query panel" title="Drag to resize, double-click to reset"></div>
       <div class="query-input-area">
-        <textarea id="query-input" placeholder="Enter SQL query... (Cmd+Enter to run)" rows="2"></textarea>
+        <textarea id="query-input" placeholder="SELECT … — Enter runs, Shift+Enter for a new line, Esc closes" rows="2"></textarea>
         <button id="run-query-btn" class="btn">Run</button>
+        <button id="clear-query-btn" class="btn" ${nothingToClear ? "disabled" : ""}>Clear</button>
       </div>
       <div class="query-results">${resultHtml}</div>
     </div>
@@ -949,7 +1081,13 @@ function setupKeyboardShortcuts(): void {
       case "/":
       case ":":
         e.preventDefault();
-        document.getElementById("query-input")?.focus();
+        openQuery();
+        break;
+      case "Escape":
+        if (state.queryOpen) {
+          e.preventDefault();
+          closeQuery();
+        }
         break;
       case "i":
         e.preventDefault();
