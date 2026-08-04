@@ -60,6 +60,15 @@ fn handle_normal(app: &mut App, key: KeyEvent) {
             app.active_panel = Panel::Query;
         }
 
+        // Put the results panel away. It shows for as long as it holds
+        // anything, so without this it never leaves once a query has run.
+        KeyCode::Esc => {
+            app.dismiss_query();
+            if app.active_panel == Panel::Query {
+                app.active_panel = Panel::Data;
+            }
+        }
+
         // Toggle sidebar
         KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             app.sidebar_collapsed = !app.sidebar_collapsed;
@@ -164,7 +173,14 @@ fn handle_query_input(app: &mut App, key: KeyEvent) {
             app.run_query();
             app.mode = AppMode::Normal;
         }
-        KeyCode::Char(c) => {
+        // Readline's "discard the line", which is what the GUI's Clear button
+        // does. Has to come before the plain Char arm, or it types a `u`.
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.clear_query();
+        }
+        // Chorded keys are not text: without this guard every Ctrl+<letter>
+        // the arms above do not claim ends up inserted as that letter.
+        KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
             app.query_input.insert(app.query_cursor, c);
             app.query_cursor += 1;
         }

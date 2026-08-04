@@ -466,6 +466,22 @@ impl App {
         }
     }
 
+    /// Empties the box and its output together, the way the GUI's Clear does.
+    /// Results left standing under a cleared query read as belonging to it.
+    pub fn clear_query(&mut self) {
+        self.query_input.clear();
+        self.query_cursor = 0;
+        self.dismiss_query();
+    }
+
+    /// Drops the output but keeps the text, so it can be edited and run again.
+    /// This is also the only way to put the results panel away: it stays up for
+    /// as long as there is something in it.
+    pub fn dismiss_query(&mut self) {
+        self.query_result = None;
+        self.query_error = None;
+    }
+
     pub fn export_table_csv(&self) -> Result<String, String> {
         if let Some(tv) = &self.table_view {
             let filename = format!("{}.csv", tv.name);

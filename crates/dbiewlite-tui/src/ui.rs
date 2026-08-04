@@ -534,7 +534,7 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     let sep = Span::styled(" \u{2502} ", dim);
 
     let keys = match app.mode {
-        AppMode::QueryInput => "Esc:cancel  Enter:run",
+        AppMode::QueryInput => "Esc:cancel  Enter:run  Ctrl+U:clear",
         AppMode::Help => "Esc/q/?:close",
         AppMode::Info => "Esc/q/i:close",
         AppMode::Normal => "q:quit  Tab:panel  ?:help  s:sort  Ctrl+B:tables  /:query",
@@ -790,7 +790,8 @@ fn draw_help_dialog(f: &mut Frame, area: Rect) {
             &[
                 ("/ or :", "open SQL query"),
                 ("Enter", "run query"),
-                ("Esc", "leave query"),
+                ("Ctrl+U", "clear query and results"),
+                ("Esc", "leave query / hide results"),
             ],
         ),
         ("Export", &[("Ctrl+E", "export table to .csv")]),
