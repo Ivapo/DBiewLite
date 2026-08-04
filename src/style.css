@@ -5,7 +5,11 @@
 :root {
   --bg-primary: #0f0f17;
   --bg-secondary: #0a0a12;
+  /* Two distinct jobs: --bg-hover is transient feedback under the pointer,
+     --bg-selected is where the selection actually is. Themes that collapse
+     them into one end up with the sidebar and the grid disagreeing. */
   --bg-hover: #292e42;
+  --bg-selected: rgba(122, 162, 247, 0.18);
   --text-primary: #c0caf5;
   --text-secondary: #565f89;
   --border-color: #3b4261;
@@ -26,6 +30,7 @@
   --bg-primary: #faf6e9;
   --bg-secondary: #f0eacd;
   --bg-hover: #ccd0da;
+  --bg-selected: rgba(30, 102, 245, 0.12);
   --text-primary: #7b2d8e;
   --text-secondary: #2563eb;
   --border-color: #89cfef;
@@ -40,7 +45,10 @@
 [data-theme="3.1"] {
   --bg-primary: #001e3d;
   --bg-secondary: #002b5c;
-  --bg-hover: #ffc600;
+  /* Hover was the accent yellow here, which made every hover the loudest
+     thing on screen and forced per-element overrides to walk it back. */
+  --bg-hover: #003d7a;
+  --bg-selected: #ffc600;
   --text-primary: #e0e0e0;
   --text-secondary: #88aacc;
   --border-color: #005599;
@@ -229,12 +237,20 @@ body {
 }
 
 .sidebar-item.active {
-  background: rgba(137, 180, 250, 0.12);
+  background: var(--bg-selected);
   border-left-color: var(--accent);
 }
 
-[data-theme="light"] .sidebar-item.active {
-  background: rgba(30, 102, 245, 0.1);
+/* focus-visible, not focus: clicking an item should not leave a ring behind
+   the way keyboard navigation should. */
+.sidebar-item:focus {
+  outline: none;
+}
+
+.sidebar-item:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--bg-hover);
 }
 
 .sidebar-icon {
@@ -414,7 +430,7 @@ body {
 }
 
 .data-table tbody tr.row-cursor {
-  background: var(--bg-hover);
+  background: var(--bg-selected);
 }
 
 /* Outlined rather than filled: the cell keeps its own value colouring, which
@@ -547,22 +563,15 @@ body {
   letter-spacing: 0.5px;
 }
 
-[data-theme="3.1"] .db-title:hover {
-  background: #003d7a;
-}
-
-[data-theme="3.1"] .sidebar-item.active {
-  background: var(--accent);
-  color: var(--bg-primary);
-}
-
+/* Alone among the themes, this one selects with an opaque bright fill, so
+   everything sitting on it has to invert — including the grid's per-type cell
+   colours, which are unreadable on yellow. The fill itself comes from
+   --bg-selected like every other theme. */
+[data-theme="3.1"] .sidebar-item.active,
 [data-theme="3.1"] .sidebar-item.active .sidebar-name,
-[data-theme="3.1"] .sidebar-item.active .sidebar-count {
+[data-theme="3.1"] .sidebar-item.active .sidebar-count,
+[data-theme="3.1"] .data-table tbody tr.row-cursor td {
   color: var(--bg-primary);
-}
-
-[data-theme="3.1"] .sidebar-item:hover {
-  background: #003d7a;
 }
 
 [data-theme="3.1"] .data-table th:hover {
@@ -579,23 +588,15 @@ body {
   background: var(--border-color);
 }
 
-/* The palette's hover blue is the accent yellow, which would swamp the row. */
-[data-theme="3.1"] .data-table tbody tr.row-cursor {
-  background: #003d7a;
-}
-
+/* A yellow outline is invisible on the yellow selected row. */
 [data-theme="3.1"] .data-table td.cell-cursor {
   outline-width: 2px;
+  outline-color: var(--bg-primary);
 }
 
 /* ============================================
    Dark Theme Overrides
    ============================================ */
-
-[data-theme="dark"] .sidebar-item.active {
-  background: var(--bg-hover);
-  border-left-color: var(--accent);
-}
 
 [data-theme="dark"] .data-header {
   background: var(--bg-primary);

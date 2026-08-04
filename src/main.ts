@@ -440,6 +440,8 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
   {
     title: "App",
     keys: [
+      ["⇥", "Focus the table list"],
+      ["⏎", "Leave the list for the grid"],
       ["/  :", "Jump to the SQL box"],
       ["⌘⏎", "Run the query"],
       ["i", "Database details"],
@@ -478,6 +480,50 @@ function renderHelpOverlay(): string {
   `;
 }
 
+function sidebarItems(): HTMLElement[] {
+  return Array.from(document.querySelectorAll(".sidebar-item[data-table]"));
+}
+
+/// How long the sidebar sits still before its contents load. Walking the list
+/// with a key held down should cost one query at the end, not one per table.
+const SIDEBAR_PREVIEW_MS = 120;
+let sidebarPreviewTimer: number | undefined;
+
+/// Loads whatever the sidebar has settled on, the way the TUI drains its
+/// pending load once an input burst ends.
+function previewSidebarSelection(name: string): void {
+  window.clearTimeout(sidebarPreviewTimer);
+  sidebarPreviewTimer = window.setTimeout(() => {
+    // Already on screen — re-querying would only throw away the scroll.
+    if (name !== state.selectedTable) void selectTable(name);
+  }, SIDEBAR_PREVIEW_MS);
+}
+
+function commitSidebarSelection(): void {
+  window.clearTimeout(sidebarPreviewTimer);
+  const active = document.activeElement as HTMLElement | null;
+  const name = active?.getAttribute("data-table");
+  if (name && name !== state.selectedTable) void selectTable(name);
+  // Contents are already showing, so Enter only hands the keys to the grid.
+  active?.blur();
+}
+
+function moveSidebarFocus(delta: number): void {
+  const items = sidebarItems();
+  if (items.length === 0) return;
+  const current = items.indexOf(document.activeElement as HTMLElement);
+  const target = items[current === -1 ? 0 : clamp(current + delta, 0, items.length - 1)];
+  if (!target) return;
+  // Carry the single tab stop to wherever the cursor now is, so tabbing away
+  // and back returns here rather than to whichever table is loaded.
+  items.forEach(item => { item.tabIndex = -1; });
+  target.tabIndex = 0;
+  target.focus();
+
+  const name = target.getAttribute("data-table");
+  if (name) previewSidebarSelection(name);
+}
+
 function toggleHelp(): void {
   state.helpOpen = !state.helpOpen;
   render();
@@ -494,6 +540,11 @@ function bindHelpOverlay(): void {
 function render(): void {
   const app = document.getElementById("app")!;
   const carriedScroll = tableWrapper()?.scrollTop ?? 0;
+  // Rebuilding the DOM drops focus, which would throw the user out of the
+  // sidebar every time picking a table re-rendered it.
+  const focusedTable = document.activeElement
+    ?.closest(".sidebar-item")
+    ?.getAttribute("data-table") ?? null;
 
   if (!state.dbInfo) {
     app.innerHTML = `
@@ -512,6 +563,14 @@ function render(): void {
   const info = state.dbInfo;
   const fileName = info.path.split("/").pop() ?? info.path;
 
+  // A roving tabindex: one item in the whole list is a tab stop, so Tab steps
+  // into the sidebar and then out to the grid rather than walking every table.
+  // j/k move within, and hand the tab stop along as they go.
+  const sidebarNames = [...state.tables.map(t => t.name), ...state.views];
+  const tabStop = state.selectedTable !== null && sidebarNames.includes(state.selectedTable)
+    ? state.selectedTable
+    : sidebarNames[0] ?? null;
+
   app.innerHTML = `
     <div class="layout">
       <div class="title-bar">
@@ -526,13 +585,14 @@ function render(): void {
       ${state.detailsOpen ? renderDbDetails(info) : ""}
       <div id="status-toast" class="status-toast hidden"></div>
       <div class="main-area">
-        <div class="sidebar">
+        <div class="sidebar" role="listbox" aria-label="Tables and views">
           <div class="sidebar-section">
             <div class="sidebar-header">Tables</div>
             ${state.tables.map(t => `
-              <div class="sidebar-item ${t.name === state.selectedTable ? "active" : ""}" data-table="${t.name}">
+              <div class="sidebar-item ${t.name === state.selectedTable ? "active" : ""}" data-table="${t.name}"
+                   role="option" tabindex="${t.name === tabStop ? 0 : -1}" aria-selected="${t.name === state.selectedTable}">
                 <span class="sidebar-icon">\u{f0ce}</span>
-                <span class="sidebar-name">${t.name}</span>
+                <span class="sidebar-name">${escapeHtml(t.name)}</span>
                 <span class="sidebar-count">${t.row_count}</span>
               </div>
             `).join("")}
@@ -541,9 +601,10 @@ function render(): void {
             <div class="sidebar-section">
               <div class="sidebar-header">Views</div>
               ${state.views.map(v => `
-                <div class="sidebar-item sidebar-view" data-table="${v}">
+                <div class="sidebar-item sidebar-view ${v === state.selectedTable ? "active" : ""}" data-table="${v}"
+                     role="option" tabindex="${v === tabStop ? 0 : -1}" aria-selected="${v === state.selectedTable}">
                   <span class="sidebar-icon">\u{f06e}</span>
-                  <span class="sidebar-name">${v}</span>
+                  <span class="sidebar-name">${escapeHtml(v)}</span>
                 </div>
               `).join("")}
             </div>
@@ -599,6 +660,10 @@ function render(): void {
   }
   applyPendingScroll(carriedScroll);
   paintCursor();
+
+  if (focusedTable !== null) {
+    sidebarItems().find(el => el.getAttribute("data-table") === focusedTable)?.focus();
+  }
 
   const queryInput = document.getElementById("query-input") as HTMLTextAreaElement | null;
   if (queryInput) {
@@ -753,6 +818,45 @@ function setupKeyboardShortcuts(): void {
       return;
     }
     if (!state.dbInfo) return;
+
+    // The sidebar answers to the same movement keys when it holds focus.
+    // Which panel is active is just where the browser's focus already is,
+    // rather than a second notion of it kept in step by hand.
+    if (document.activeElement?.closest(".sidebar")) {
+      switch (e.key) {
+        case "ArrowDown":
+        case "j":
+          e.preventDefault();
+          moveSidebarFocus(1);
+          return;
+        case "ArrowUp":
+        case "k":
+          e.preventDefault();
+          moveSidebarFocus(-1);
+          return;
+        case "g":
+          e.preventDefault();
+          sidebarItems()[0]?.focus();
+          return;
+        case "G":
+          e.preventDefault();
+          sidebarItems().at(-1)?.focus();
+          return;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          commitSidebarSelection();
+          return;
+        case "Escape":
+          e.preventDefault();
+          window.clearTimeout(sidebarPreviewTimer);
+          (document.activeElement as HTMLElement).blur();
+          return;
+      }
+      // App-wide keys still work from here; the grid's do not, since the
+      // cursor is not what the arrow keys are pointing at right now.
+      if (e.key !== "/" && e.key !== ":" && e.key !== "i") return;
+    }
 
     // Half-viewport jumps. Ctrl rather than Cmd, matching the TUI — and they
     // are free outside a text field, where macOS would read them as
