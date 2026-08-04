@@ -46,6 +46,8 @@ export interface AppState {
   dbInfo: DbInfo | null;
   tables: TableInfo[];
   views: string[];
+  /// Only used by the details panel, which reports it the way the TUI does.
+  indexCount: number;
   selectedTable: string | null;
   schema: ColumnInfo[];
   data: QueryResult | null;

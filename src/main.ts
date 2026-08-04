@@ -2,7 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type { AppState, DbInfo, TableInfo, ColumnInfo, QueryResult } from "./types";
-import { initTheme, cycleTheme } from "./theme";
+import { initTheme, cycleTheme, getTheme } from "./theme";
+import type { ThemeName } from "./theme";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 // --- query panel sizing ------------------------------------------------
 //
@@ -30,6 +32,7 @@ const state: AppState = {
   dbInfo: null,
   tables: [],
   views: [],
+  indexCount: 0,
   selectedTable: null,
   schema: [],
   data: null,
@@ -65,6 +68,7 @@ async function openDatabase(path: string): Promise<void> {
     state.dbInfo = await invoke<DbInfo>("open_database", { path });
     state.tables = await invoke<TableInfo[]>("list_tables");
     state.views = await invoke<string[]>("list_views");
+    state.indexCount = (await invoke<unknown[]>("list_indexes")).length;
     state.selectedTable = null;
     state.data = null;
     state.schema = [];
@@ -74,6 +78,13 @@ async function openDatabase(path: string): Promise<void> {
     if (state.tables.length > 0) {
       await selectTable(state.tables[0]!.name);
     }
+
+    // The window is named for what it holds, which is what the Window menu and
+    // Mission Control read.
+    const opened = path.split("/").pop() ?? path;
+    getCurrentWindow().setTitle(opened).catch((e: unknown) => {
+      console.error("could not set the window title:", e);
+    });
 
     render();
   } catch (e) {
@@ -441,25 +452,84 @@ function cellClass(val: unknown): string {
   return "cell-text";
 }
 
-function renderDbDetails(info: DbInfo): string {
-  const rows: [string, string][] = [
-    ["Path", escapeHtml(info.path)],
-    ["Engine", `${info.engine} ${info.engine_version}`],
-    ["Size", formatSize(info.file_size)],
-    ["Tables", `${info.table_count}${state.views.length > 0 ? ` │ ${state.views.length} views` : ""}`],
-  ];
-  if (info.page_count !== null) rows.push(["Pages", String(info.page_count)]);
-  if (info.page_size !== null) rows.push(["Page size", `${info.page_size} B`]);
+function thousands(n: number): string {
+  return n.toLocaleString("en-US");
+}
 
-  return `
-    <div id="db-details" class="db-details">
-      <dl class="db-details-grid">
-        ${rows.map(([label, value]) => `
-          <dt>${label}</dt>
-          <dd>${value}</dd>
+/// Sectioned the way the TUI's info overlay is, so the two report the same
+/// things about a file in the same order.
+function detailSections(info: DbInfo): { title: string; rows: [string, string][] }[] {
+  const isParquet = info.engine === "Parquet";
+  const name = info.path.split("/").pop() ?? info.path;
+  const folder = info.path.slice(0, info.path.length - name.length).replace(/\/$/, "");
+
+  const file: [string, string][] = [
+    ["Name", name],
+    ["Folder", folder || "/"],
+    ["Size", formatSize(info.file_size)],
+  ];
+  if (isParquet) {
+    file.push(["Format", "Parquet"]);
+    // Named apart so the DuckDB version is not read as a Parquet one.
+    file.push(["Reader", `DuckDB ${info.engine_version}`]);
+  } else {
+    file.push(["Engine", `${info.engine} ${info.engine_version}`]);
+    if (info.page_count !== null && info.page_size !== null) {
+      file.push(["Pages", `${thousands(info.page_count)} \u00d7 ${formatSize(info.page_size)}`]);
+    }
+  }
+
+  const totalRows = state.tables.reduce((sum, t) => sum + t.row_count, 0);
+  const sections = [{ title: "File", rows: file }];
+
+  if (isParquet) {
+    // One table by definition, so describe the shape of the data instead.
+    const columns = state.tables[0]?.column_count ?? 0;
+    sections.push({
+      title: "Contents",
+      rows: [["Columns", String(columns)], ["Rows", thousands(totalRows)]],
+    });
+    return sections;
+  }
+
+  const contents: [string, string][] = [["Tables", thousands(state.tables.length)]];
+  if (state.views.length > 0) contents.push(["Views", thousands(state.views.length)]);
+  contents.push(["Indexes", thousands(state.indexCount)]);
+  contents.push(["Rows", `${thousands(totalRows)} total`]);
+  sections.push({ title: "Contents", rows: contents });
+
+  if (state.selectedTable && state.data) {
+    sections.push({
+      title: "Selected",
+      rows: [[state.selectedTable, `${state.data.columns.length} columns \u00b7 ${thousands(state.data.total_rows ?? 0)} rows`]],
+    });
+  }
+
+  return sections;
+}
+
+function renderDbDetails(info: DbInfo): string {
+  const body = detailSections(info).map(section => `
+    <section class="overlay-section">
+      <h3>${section.title}</h3>
+      <dl>
+        ${section.rows.map(([label, value]) => `
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(value)}</dd>
         `).join("")}
       </dl>
-      <div class="db-details-hint">${MOD}O open another database</div>
+    </section>
+  `).join("");
+
+  return `
+    <div id="details-overlay" class="overlay">
+      <div class="overlay-panel" role="dialog" aria-label="Database details">
+        <div class="overlay-header">
+          <span class="overlay-title">${info.engine === "Parquet" ? "File" : "Database"} details</span>
+          <button id="details-close" class="btn btn-sm" title="Esc also closes">Close</button>
+        </div>
+        <div class="overlay-body">${body}</div>
+      </div>
     </div>
   `;
 }
@@ -530,9 +600,47 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
   },
 ];
 
+// Inline rather than a font glyph: the nerd-font icons in the sidebar only
+// render under the monospace themes, and a theme switch must not be able to
+// blank out its own control.
+const ICON_MOON = `<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.2 1.4a6.6 6.6 0 1 0 8.4 8.4A7.2 7.2 0 0 1 6.2 1.4z"/></svg>`;
+const ICON_SUN = `<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><g stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3.1 3.1l1.3 1.3M11.6 11.6l1.3 1.3M12.9 3.1l-1.3 1.3M4.4 11.6l-1.3 1.3"/></g></svg>`;
+
+/// What each theme looks like as a single control. The button shows the theme
+/// currently in force and steps to the next one, the way Cmd+T does.
+const THEME_FACES: Record<ThemeName, { icon: string; name: string }> = {
+  dark: { icon: ICON_MOON, name: "Dark" },
+  light: { icon: ICON_SUN, name: "Light" },
+  "3.1": { icon: "3.1", name: "3.1" },
+};
+
+function renderStatusBar(fileName: string): string {
+  const counts = [
+    `${state.tables.length} ${state.tables.length === 1 ? "table" : "tables"}`,
+    state.views.length > 0 ? `${state.views.length} ${state.views.length === 1 ? "view" : "views"}` : null,
+  ].filter(Boolean).join(" \u00b7 ");
+
+  const face = THEME_FACES[getTheme()];
+
+  return `
+    <div class="status-bar">
+      <button id="db-details-toggle" class="status-file" aria-haspopup="dialog" aria-expanded="${state.detailsOpen}"
+              title="Database details (i)">
+        <span class="status-file-name">${escapeHtml(fileName)}</span>
+        <span class="status-sep">\u2502</span>
+        <span class="status-counts">${counts}</span>
+      </button>
+      <div class="status-right">
+        <button id="theme-btn" class="theme-toggle" title="${face.name} theme \u2014 click for the next">${face.icon}</button>
+        <span class="status-brand">DBiewLite</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderHelpOverlay(): string {
   const sections = SHORTCUTS.map(section => `
-    <section class="help-section">
+    <section class="overlay-section">
       <h3>${section.title}</h3>
       <dl>
         ${section.keys.map(([key, description]) => `
@@ -544,13 +652,13 @@ function renderHelpOverlay(): string {
   `).join("");
 
   return `
-    <div id="help-overlay" class="help-overlay">
-      <div class="help-panel" role="dialog" aria-label="Keyboard shortcuts">
-        <div class="help-header">
-          <span class="help-title">Keyboard shortcuts</span>
+    <div id="help-overlay" class="overlay">
+      <div class="overlay-panel" role="dialog" aria-label="Keyboard shortcuts">
+        <div class="overlay-header">
+          <span class="overlay-title">Keyboard shortcuts</span>
           <button id="help-close" class="btn btn-sm" title="Esc also closes">Close</button>
         </div>
-        <div class="help-body">${sections}</div>
+        <div class="overlay-body overlay-body-columns">${sections}</div>
       </div>
     </div>
   `;
@@ -682,6 +790,11 @@ function toggleQuery(): void {
 
 /// Held in state rather than toggled on the element: the class was being
 /// dropped by the next render, so the sidebar came back on its own.
+function toggleDetails(): void {
+  state.detailsOpen = !state.detailsOpen;
+  render();
+}
+
 function toggleSidebar(): void {
   state.sidebarCollapsed = !state.sidebarCollapsed;
   render();
@@ -704,6 +817,12 @@ function bindHelpOverlay(): void {
     if (e.target === overlay) toggleHelp();
   });
   document.getElementById("help-close")?.addEventListener("click", toggleHelp);
+
+  const details = document.getElementById("details-overlay");
+  details?.addEventListener("click", (e) => {
+    if (e.target === details) toggleDetails();
+  });
+  document.getElementById("details-close")?.addEventListener("click", toggleDetails);
 }
 
 function render(): void {
@@ -742,16 +861,6 @@ function render(): void {
 
   app.innerHTML = `
     <div class="layout">
-      <div class="title-bar">
-        <button id="db-details-toggle" class="disclosure db-title" aria-expanded="${state.detailsOpen}" aria-controls="db-details">
-          <span class="db-title-name">${escapeHtml(fileName)}</span>
-          <span class="disclosure-chevron ${state.detailsOpen ? "open" : ""}">\u203a</span>
-        </button>
-        <div class="title-actions">
-          <button id="theme-btn" class="btn btn-sm">Theme</button>
-        </div>
-      </div>
-      ${state.detailsOpen ? renderDbDetails(info) : ""}
       <div id="status-toast" class="status-toast hidden"></div>
       <div class="main-area">
         <div class="sidebar ${state.sidebarCollapsed ? "collapsed" : ""}" role="listbox" aria-label="Tables and views">
@@ -784,15 +893,18 @@ function render(): void {
           ${state.queryOpen ? renderQueryPanel() : ""}
         </div>
       </div>
+      ${renderStatusBar(fileName)}
     </div>
+    ${state.detailsOpen ? renderDbDetails(info) : ""}
     ${state.helpOpen ? renderHelpOverlay() : ""}
   `;
 
   // Bind events
   bindHelpOverlay();
-  document.getElementById("theme-btn")?.addEventListener("click", () => { cycleTheme(); });
-  document.getElementById("db-details-toggle")?.addEventListener("click", () => {
-    state.detailsOpen = !state.detailsOpen;
+  document.getElementById("db-details-toggle")?.addEventListener("click", toggleDetails);
+  document.getElementById("theme-btn")?.addEventListener("click", () => {
+    cycleTheme();
+    // Re-rendered so the button shows the theme it just moved to.
     render();
   });
 
@@ -995,6 +1107,11 @@ function setupKeyboardShortcuts(): void {
 
     // The overlay swallows every key, the way the TUI's does: the key that
     // opened it closes it again, and nothing reaches the grid meanwhile.
+    if (state.detailsOpen) {
+      e.preventDefault();
+      if (e.key === "Escape" || e.key === "Enter" || e.key === "i") toggleDetails();
+      return;
+    }
     if (state.helpOpen) {
       e.preventDefault();
       if (e.key === "Escape" || e.key === "Enter" || e.key === "?") toggleHelp();
@@ -1135,8 +1252,7 @@ function setupKeyboardShortcuts(): void {
         break;
       case "i":
         e.preventDefault();
-        state.detailsOpen = !state.detailsOpen;
-        render();
+        toggleDetails();
         break;
       case "c":
         e.preventDefault();
@@ -1160,7 +1276,7 @@ function setupMenuListeners(): void {
     ["menu:export", () => { void exportCsv(); }],
     ["menu:sidebar", toggleSidebar],
     ["menu:theme", () => { cycleTheme(); }],
-    ["menu:details", () => { state.detailsOpen = !state.detailsOpen; render(); }],
+    ["menu:details", toggleDetails],
     ["menu:columns", toggleSchema],
     ["menu:query", toggleQuery],
     ["menu:shortcuts", toggleHelp],

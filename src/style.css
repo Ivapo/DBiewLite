@@ -74,6 +74,9 @@ body {
   background: var(--bg-primary);
   overflow: hidden;
   height: 100vh;
+  /* Separates the app from the window's own title bar, which sits directly
+     above it with nothing between the two. */
+  border-top: 1px solid var(--border-color);
 }
 
 /* ============================================
@@ -109,18 +112,6 @@ body {
   height: 100vh;
 }
 
-.title-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--spacing-md);
-  height: 32px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  user-select: none;
-  -webkit-app-region: drag;
-}
-
 /* Shared by the two disclosures — the database details in the title bar and
    the column details above the grid. One gesture, styled once. */
 .disclosure {
@@ -149,51 +140,6 @@ body {
 
 .disclosure-chevron.open {
   transform: rotate(90deg);
-}
-
-.db-title {
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 600;
-  -webkit-app-region: no-drag;
-}
-
-.db-details {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  font-size: 12px;
-}
-
-.db-details-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px var(--spacing-md);
-  min-width: 0;
-}
-
-.db-details-grid dt {
-  color: var(--text-secondary);
-}
-
-.db-details-grid dd {
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-
-.db-details-hint {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-}
-
-.title-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-  -webkit-app-region: no-drag;
 }
 
 .main-area {
@@ -297,7 +243,8 @@ body {
 
 .status-toast {
   position: fixed;
-  bottom: var(--spacing-lg);
+  /* Clear of the status bar, which now occupies the bottom of the window. */
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-secondary);
@@ -595,24 +542,6 @@ body {
   font-size: 11px;
 }
 
-/* ============================================
-   3.1 Theme Overrides
-   ============================================ */
-
-[data-theme="3.1"] .title-bar {
-  background: #0055aa;
-  border-bottom-color: var(--accent);
-}
-
-[data-theme="3.1"] .db-title {
-  color: #ffffff;
-}
-
-[data-theme="3.1"] .db-title-name {
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 /* Alone among the themes, this one selects with an opaque bright fill, so
    everything sitting on it has to invert — including the grid's per-type cell
    colours, which are unreadable on yellow. The fill itself comes from
@@ -667,7 +596,7 @@ body {
    Keyboard Shortcuts Overlay
    ============================================ */
 
-.help-overlay {
+.overlay {
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -678,7 +607,7 @@ body {
   background: rgba(0, 0, 0, 0.5);
 }
 
-.help-panel {
+.overlay-panel {
   display: flex;
   flex-direction: column;
   width: min(720px, 100%);
@@ -689,7 +618,7 @@ body {
   overflow: hidden;
 }
 
-.help-header {
+.overlay-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -697,7 +626,7 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
-.help-title {
+.overlay-title {
   font-weight: 600;
   color: var(--accent);
 }
@@ -705,20 +634,23 @@ body {
 /* Flowed into columns rather than laid out on a grid: the sections are very
    different heights, and grid rows align, so the short ones left a hole beside
    the long one. Columns balance instead, and drop to one when narrow. */
-.help-body {
-  columns: 260px 2;
-  column-gap: var(--spacing-lg);
+.overlay-body {
   padding: var(--spacing-lg);
   overflow-y: auto;
 }
 
-.help-section {
+.overlay-body-columns {
+  columns: 260px 2;
+  column-gap: var(--spacing-lg);
+}
+
+.overlay-section {
   /* A section split down the middle of a column reads as two sections. */
   break-inside: avoid;
   margin-bottom: var(--spacing-lg);
 }
 
-.help-section h3 {
+.overlay-section h3 {
   margin-bottom: var(--spacing-sm);
   font-size: 11px;
   font-weight: 600;
@@ -727,7 +659,7 @@ body {
   color: var(--text-secondary);
 }
 
-.help-section dl {
+.overlay-section dl {
   display: grid;
   /* Fixed key column so the descriptions line up down the whole panel. */
   grid-template-columns: 92px 1fr;
@@ -735,12 +667,12 @@ body {
   align-items: baseline;
 }
 
-.help-section dd {
+.overlay-section dd {
   font-size: 12px;
   color: var(--text-primary);
 }
 
-.help-section kbd {
+.overlay-section kbd {
   display: inline-block;
   padding: 1px 6px;
   border: 1px solid var(--border-color);
@@ -780,4 +712,86 @@ body {
 
 [data-theme="dark"] ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* ============================================
+   Status Bar
+   ============================================ */
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  height: 26px;
+  padding: 0 var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: 11px;
+  user-select: none;
+}
+
+.status-file {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  padding: 2px var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-file:hover {
+  background: var(--bg-hover);
+}
+
+.status-file-name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-sep,
+.status-counts {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.status-brand {
+  font-weight: 600;
+  color: var(--accent);
+  padding-right: var(--spacing-sm);
 }
