@@ -1,6 +1,10 @@
 target/
 dist/
 node_modules/
+.DS_Store
+# The site builds separately; leaving its lockfile untracked keeps pushes here
+# from triggering a Pages deploy.
+web/bun.lock
 # Permission schemas Tauri regenerates on every build.
 src-tauri/gen/
 *.sqlite
