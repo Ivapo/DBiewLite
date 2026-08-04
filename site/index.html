@@ -96,43 +96,6 @@
     .btn-green { background: var(--green); color: #000; font-weight: 600; }
     .btn-green:hover { background: #16a34a; }
 
-    /* Dropdown button */
-    .btn-dropdown {
-      position: relative;
-    }
-    .btn-dropdown .dropdown-menu {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      padding-top: 0.25rem;
-      z-index: 10;
-      width: max-content;
-    }
-    .btn-dropdown .dropdown-menu-inner {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .btn-dropdown:hover .dropdown-menu,
-    .btn-dropdown:focus-within .dropdown-menu {
-      display: block;
-    }
-    .btn-dropdown .dropdown-menu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: var(--text);
-      font-size: 0.85rem;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-    .btn-dropdown .dropdown-menu a:hover {
-      background: var(--border);
-      text-decoration: none;
-    }
-
     /* Section shared */
     section {
       max-width: var(--max-w);
@@ -255,21 +218,15 @@
     <p class="tagline">A friendly, read-only database viewer for SQLite, DuckDB, and Parquet files.</p>
 
     <div class="btn-row">
-      <div class="btn-dropdown">
-        <span class="btn btn-primary">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          macOS &#9662;
-        </span>
-        <div class="dropdown-menu"><div class="dropdown-menu-inner">
-          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_aarch64.dmg">Apple Silicon</a>
-          <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_x64.dmg">Intel</a>
-        </div></div>
-      </div>
-      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_x64-setup.exe" class="btn btn-primary">
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest" class="btn btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        macOS
+      </a>
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Windows
       </a>
-      <a href="https://github.com/Ivapo/DBiewLite/releases/latest/download/DBiewLite_0.4.0_amd64.AppImage" class="btn btn-primary">
+      <a href="https://github.com/Ivapo/DBiewLite/releases/latest" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Linux
       </a>
