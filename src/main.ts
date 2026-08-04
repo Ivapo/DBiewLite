@@ -548,7 +548,7 @@ function renderHelpOverlay(): string {
       <div class="help-panel" role="dialog" aria-label="Keyboard shortcuts">
         <div class="help-header">
           <span class="help-title">Keyboard shortcuts</span>
-          <span class="help-dismiss">esc to close</span>
+          <button id="help-close" class="btn btn-sm" title="Esc also closes">Close</button>
         </div>
         <div class="help-body">${sections}</div>
       </div>
@@ -703,6 +703,7 @@ function bindHelpOverlay(): void {
   overlay?.addEventListener("click", (e) => {
     if (e.target === overlay) toggleHelp();
   });
+  document.getElementById("help-close")?.addEventListener("click", toggleHelp);
 }
 
 function render(): void {

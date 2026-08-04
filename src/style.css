@@ -702,17 +702,20 @@ body {
   color: var(--accent);
 }
 
-.help-dismiss {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
+/* Flowed into columns rather than laid out on a grid: the sections are very
+   different heights, and grid rows align, so the short ones left a hole beside
+   the long one. Columns balance instead, and drop to one when narrow. */
 .help-body {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-lg);
+  columns: 260px 2;
+  column-gap: var(--spacing-lg);
   padding: var(--spacing-lg);
   overflow-y: auto;
+}
+
+.help-section {
+  /* A section split down the middle of a column reads as two sections. */
+  break-inside: avoid;
+  margin-bottom: var(--spacing-lg);
 }
 
 .help-section h3 {
