@@ -794,7 +794,10 @@ fn draw_help_dialog(f: &mut Frame, area: Rect) {
                 ("Esc", "leave query / hide results"),
             ],
         ),
-        ("Export", &[("Ctrl+E", "export table to .csv")]),
+        (
+            "Export",
+            &[("Ctrl+E", "export table, or query results")],
+        ),
         (
             "Mouse",
             &[

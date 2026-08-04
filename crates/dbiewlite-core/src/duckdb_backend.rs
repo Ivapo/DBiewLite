@@ -1,6 +1,5 @@
 use duckdb::types::ValueRef;
 use duckdb::Connection;
-use std::io::Write;
 use std::path::Path;
 
 use crate::types::*;
@@ -219,18 +218,9 @@ impl DuckdbBackend {
         offset: usize,
         sort: Option<Sort>,
     ) -> Result<QueryResult, String> {
-        let order_clause = match &sort {
-            Some(s) => format!(
-                " ORDER BY \"{}\" {}",
-                s.column,
-                if s.ascending { "ASC" } else { "DESC" }
-            ),
-            None => String::new(),
-        };
-
         let sql = format!(
             "SELECT * FROM \"{}\"{} LIMIT {} OFFSET {}",
-            table, order_clause, limit, offset
+            table, order_clause(&sort), limit, offset
         );
 
         let total = self.get_row_count(table).ok();
@@ -293,8 +283,4 @@ impl DuckdbBackend {
             .map_err(|e| e.to_string())
     }
 
-    pub fn export_csv<W: Write>(&self, table: &str, writer: &mut W) -> Result<(), String> {
-        let result = self.run_query(&format!("SELECT * FROM \"{}\"", table))?;
-        write_csv(&result, writer)
-    }
 }

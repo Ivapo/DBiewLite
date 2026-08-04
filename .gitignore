@@ -1,6 +1,8 @@
 target/
 dist/
 node_modules/
+# Permission schemas Tauri regenerates on every build.
+src-tauri/gen/
 *.sqlite
 *.db
 !samples/*.sqlite

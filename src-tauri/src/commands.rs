@@ -73,10 +73,33 @@ pub fn get_db_info(state: State<DbState>) -> Result<DbInfo, String> {
 }
 
 #[tauri::command]
-pub fn export_csv(table: String, output_path: String, state: State<DbState>) -> Result<String, String> {
+pub fn export_csv(
+    table: String,
+    output_path: String,
+    sort_column: Option<String>,
+    sort_ascending: Option<bool>,
+    state: State<DbState>,
+) -> Result<String, String> {
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let db = guard.as_ref().ok_or("No database open")?;
+    let sort = sort_column.map(|col| Sort {
+        column: col,
+        ascending: sort_ascending.unwrap_or(true),
+    });
+    let mut file = std::fs::File::create(&output_path).map_err(|e| e.to_string())?;
+    db.export_csv(&table, sort, &mut file)?;
+    Ok(output_path)
+}
+
+#[tauri::command]
+pub fn export_query_csv(
+    sql: String,
+    output_path: String,
+    state: State<DbState>,
+) -> Result<String, String> {
     let guard = state.0.lock().map_err(|e| e.to_string())?;
     let db = guard.as_ref().ok_or("No database open")?;
     let mut file = std::fs::File::create(&output_path).map_err(|e| e.to_string())?;
-    db.export_csv(&table, &mut file)?;
+    db.export_query_csv(&sql, &mut file)?;
     Ok(output_path)
 }

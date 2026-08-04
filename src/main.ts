@@ -382,7 +382,30 @@ async function exportCsv(): Promise<void> {
   });
   if (!outputPath) return;
   try {
-    await invoke("export_csv", { table: state.selectedTable, outputPath });
+    // Sorted as the grid is. The page window is not applied: the whole table
+    // goes out, not the fifty rows currently on screen.
+    await invoke("export_csv", {
+      table: state.selectedTable,
+      outputPath,
+      sortColumn: state.sort?.column ?? null,
+      sortAscending: state.sort?.ascending ?? null,
+    });
+    showStatus(`Exported to ${outputPath}`);
+  } catch (e) {
+    showStatus(`Export failed: ${e}`);
+  }
+}
+
+async function exportQueryCsv(): Promise<void> {
+  const sql = state.queryInput.trim();
+  if (!sql || !state.queryResult) return;
+  const outputPath = await save({
+    defaultPath: "query-results.csv",
+    filters: [{ name: "CSV", extensions: ["csv"] }],
+  });
+  if (!outputPath) return;
+  try {
+    await invoke("export_query_csv", { sql, outputPath });
     showStatus(`Exported to ${outputPath}`);
   } catch (e) {
     showStatus(`Export failed: ${e}`);
@@ -808,6 +831,7 @@ function render(): void {
   document.getElementById("query-btn")?.addEventListener("click", toggleQuery);
   document.getElementById("run-query-btn")?.addEventListener("click", runQuery);
   document.getElementById("clear-query-btn")?.addEventListener("click", clearQuery);
+  document.getElementById("export-query-btn")?.addEventListener("click", () => { void exportQueryCsv(); });
   bindQueryResize();
 }
 
@@ -881,7 +905,10 @@ function renderQueryPanel(): string {
       return `<tr>${cells}</tr>`;
     }).join("");
     resultHtml = `
-      <div class="query-result-info">${state.queryResult.rows.length} rows returned</div>
+      <div class="query-result-info">
+        <span>${state.queryResult.rows.length} rows returned</span>
+        <button id="export-query-btn" class="btn btn-sm">Export .csv</button>
+      </div>
       <div class="table-wrapper">
         <table class="data-table">
           <thead><tr>${qHeaders}</tr></thead>

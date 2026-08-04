@@ -33,6 +33,7 @@ pub fn run() {
             commands::run_query,
             commands::get_db_info,
             commands::export_csv,
+            commands::export_query_csv,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

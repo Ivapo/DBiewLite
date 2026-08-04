@@ -91,6 +91,29 @@ pub fn format_size(bytes: u64) -> String {
     }
 }
 
+/// The ORDER BY for a sorted view, shared by the paged reads and the export so
+/// a file cannot come out ordered differently from the grid it was taken from.
+pub fn order_clause(sort: &Option<Sort>) -> String {
+    match sort {
+        Some(s) => format!(
+            " ORDER BY \"{}\" {}",
+            s.column,
+            if s.ascending { "ASC" } else { "DESC" }
+        ),
+        None => String::new(),
+    }
+}
+
+/// How a cell is written to a file, as opposed to drawn on screen. NULL becomes
+/// an empty field, which is the CSV convention and what a reader will expect;
+/// the word the grid shows would be indistinguishable from the text "NULL".
+fn csv_field(value: &CellValue) -> String {
+    match value {
+        CellValue::Null => String::new(),
+        other => other.to_string(),
+    }
+}
+
 pub fn write_csv<W: Write>(result: &QueryResult, writer: &mut W) -> Result<(), String> {
     let header = result
         .columns
@@ -103,7 +126,7 @@ pub fn write_csv<W: Write>(result: &QueryResult, writer: &mut W) -> Result<(), S
     for row in &result.rows {
         let line = row
             .iter()
-            .map(|v| escape_csv(&v.to_string()))
+            .map(|v| escape_csv(&csv_field(v)))
             .collect::<Vec<_>>()
             .join(",");
         writeln!(writer, "{}", line).map_err(|e| e.to_string())?;

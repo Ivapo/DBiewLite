@@ -482,11 +482,26 @@ impl App {
         self.query_error = None;
     }
 
+    /// Writes the query results instead of a table. Re-runs the SQL rather
+    /// than writing out the rows already held, so the file is the whole result
+    /// and not just what was fetched for display.
+    pub fn export_query_csv(&self) -> Result<String, String> {
+        let sql = self.query_input.trim();
+        if sql.is_empty() {
+            return Err("No query to export".to_string());
+        }
+        let filename = "query-results.csv".to_string();
+        let mut file = std::fs::File::create(&filename).map_err(|e| e.to_string())?;
+        self.db.export_query_csv(sql, &mut file)?;
+        Ok(filename)
+    }
+
     pub fn export_table_csv(&self) -> Result<String, String> {
         if let Some(tv) = &self.table_view {
             let filename = format!("{}.csv", tv.name);
             let mut file = std::fs::File::create(&filename).map_err(|e| e.to_string())?;
-            self.db.export_csv(&tv.name, &mut file)?;
+            // Sorted the way the grid is, so the file matches what was on screen.
+            self.db.export_csv(&tv.name, tv.sort.clone(), &mut file)?;
             Ok(filename)
         } else {
             Err("No table selected".to_string())

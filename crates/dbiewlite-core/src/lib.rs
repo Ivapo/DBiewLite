@@ -118,11 +118,28 @@ impl Database {
         }
     }
 
-    pub fn export_csv<W: Write>(&self, table: &str, writer: &mut W) -> Result<(), String> {
-        match self {
-            Database::SQLite(db) => db.export_csv(table, writer),
-            Database::DuckDB(db) => db.export_csv(table, writer),
-        }
+    /// Writes the whole table, in the order it is being viewed in. The page
+    /// window is deliberately not applied: exporting the fifty rows that happen
+    /// to be on screen out of thousands is not what the button appears to do.
+    ///
+    /// Neither this nor the query export touches anything specific to a
+    /// backend, so both live here rather than being written twice.
+    pub fn export_csv<W: Write>(
+        &self,
+        table: &str,
+        sort: Option<Sort>,
+        writer: &mut W,
+    ) -> Result<(), String> {
+        let sql = format!("SELECT * FROM \"{}\"{}", table, order_clause(&sort));
+        let result = self.run_query(&sql)?;
+        write_csv(&result, writer)
+    }
+
+    /// Re-runs the query rather than being handed its rows, so the export is
+    /// not bounded by whatever the caller happens to be holding.
+    pub fn export_query_csv<W: Write>(&self, sql: &str, writer: &mut W) -> Result<(), String> {
+        let result = self.run_query(sql)?;
+        write_csv(&result, writer)
     }
 }
 

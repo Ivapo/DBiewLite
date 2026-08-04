@@ -78,8 +78,16 @@ fn handle_normal(app: &mut App, key: KeyEvent) {
         }
 
         // Export
+        // Exports whichever panel is in focus. Running a query leaves the query
+        // panel active, so Ctrl+E straight afterwards writes its results, which
+        // is the point at which they are wanted.
         KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            match app.export_table_csv() {
+            let exported = if app.active_panel == Panel::Query && app.query_result.is_some() {
+                app.export_query_csv()
+            } else {
+                app.export_table_csv()
+            };
+            match exported {
                 Ok(path) => app.set_status(format!("Exported to {}", path)),
                 Err(e) => app.set_status(format!("Export failed: {}", e)),
             }
