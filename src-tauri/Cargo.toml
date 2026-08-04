@@ -1,6 +1,6 @@
 [package]
 name = "dbiewlite-app"
-version = "0.4.0"
+version = "0.4.1"
 description = "A friendly database viewer for SQLite, DuckDB, and Parquet files"
 authors = []
 license = "MIT"
